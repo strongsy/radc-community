@@ -2,16 +2,27 @@
 
 namespace App\Models;
 
-// use Illuminate\Contracts\Auth\MustVerifyEmail;
+use Database\Factories\UserFactory;
+use Illuminate\Contracts\Auth\MustVerifyEmail;
+use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
 use Illuminate\Support\Str;
+use Spatie\Activitylog\LogOptions;
+use Spatie\Activitylog\Traits\CausesActivity;
+use Spatie\Activitylog\Traits\LogsActivity;
+use Spatie\Permission\Traits\HasRoles;
 
-class User extends Authenticatable
+/**
+ * @method static search(string $search)
+ *
+ * @property mixed $is_blocked
+ */
+class User extends Authenticatable implements MustVerifyEmail, ShouldQueue
 {
-    /** @use HasFactory<\Database\Factories\UserFactory> */
-    use HasFactory, Notifiable;
+    /** @use HasFactory<UserFactory> */
+    use CausesActivity, HasFactory, HasRoles, LogsActivity, Notifiable;
 
     /**
      * The attributes that are mass assignable.
@@ -22,6 +33,17 @@ class User extends Authenticatable
         'name',
         'email',
         'password',
+        'community',
+        'membership',
+        'affiliation',
+        'is_subscribed',
+        'is_active',
+        'is_blocked',
+        'activated_by',
+        'activated_at',
+        'blocked_by',
+        'blocked_at',
+        'unsubscribe_token',
     ];
 
     /**
@@ -32,6 +54,7 @@ class User extends Authenticatable
     protected $hidden = [
         'password',
         'remember_token',
+        'unsubscribe_token',
     ];
 
     /**
@@ -47,6 +70,24 @@ class User extends Authenticatable
         ];
     }
 
+    public function getFirstNameAttribute(): string
+    {
+        return explode(' ', $this->name)[0];
+    }
+
+    protected static function booted(): void
+    {
+        static::creating(static function ($user) {
+            $user->unsubscribe_token = $user->unsubscribe_token ?? Str::random(32);
+        });
+
+        static::updating(static function ($user) {
+            if (! $user->unsubscribe_token) {
+                $user->unsubscribe_token = Str::random(32);
+            }
+        });
+    }
+
     /**
      * Get the user's initials
      */
@@ -56,5 +97,13 @@ class User extends Authenticatable
             ->explode(' ')
             ->map(fn (string $name) => Str::of($name)->substr(0, 1))
             ->implode('');
+    }
+
+    public function getActivitylogOptions(): LogOptions
+    {
+        return LogOptions::defaults()
+            ->logOnly(['name', 'is_blocked', 'is_active', 'is_subscribed', 'email', 'community', 'membership'])
+            ->setDescriptionForEvent(fn (string $eventName) => "This user has been {$eventName}");
+        // Chain fluent methods for configuration options
     }
 }

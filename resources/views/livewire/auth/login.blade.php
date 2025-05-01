@@ -77,7 +77,7 @@ new #[Layout('components.layouts.auth')] class extends Component {
     <x-auth-header :title="__('Log in to your account')" :description="__('Enter your email and password below to log in')" />
 
     <!-- Session Status -->
-    <x-auth-session-status class="text-center" :status="session('status')" />
+    <x-auth-session-status class="text-center text-teal-500 dark:text-teal-400" :status="session('status')" />
 
     <form wire:submit="login" class="flex flex-col gap-6">
         <!-- Email Address -->
@@ -85,7 +85,7 @@ new #[Layout('components.layouts.auth')] class extends Component {
             wire:model="email"
             :label="__('Email address')"
             type="email"
-            required
+            required=""
             autofocus
             autocomplete="email"
             placeholder="email@example.com"
@@ -97,7 +97,7 @@ new #[Layout('components.layouts.auth')] class extends Component {
                 wire:model="password"
                 :label="__('Password')"
                 type="password"
-                required
+                required=""
                 autocomplete="current-password"
                 :placeholder="__('Password')"
             />
