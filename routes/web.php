@@ -68,6 +68,10 @@ Route::middleware(['auth'])->group(function () {
 
     // activity log views
     Volt::route('activity-log', 'backend.activity.index.page')->name('activity-log')->middleware('can:activity-log-read');
+
+    // mail views
+    Volt::route('mail-list', 'backend.email.index.page')->name('mail-list')->middleware('can:mail-read');
+    Volt::route('mail-archived', 'backend.email.archived.page')->name('mail-archived')->middleware('can:mail-restore');
 });
 
 require __DIR__.'/auth.php';

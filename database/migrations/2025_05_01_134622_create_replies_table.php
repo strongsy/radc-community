@@ -1,5 +1,7 @@
 <?php
 
+use App\Models\Email;
+use App\Models\User;
 use Illuminate\Database\Migrations\Migration;
 use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Support\Facades\Schema;
@@ -8,10 +10,10 @@ return new class extends Migration
 {
     public function up(): void
     {
-        Schema::create('emails', static function (Blueprint $table) {
+        Schema::create('replies', static function (Blueprint $table) {
             $table->id();
-            $table->string('sender_name');
-            $table->string('sender_email');
+            $table->foreignIdFor(Email::class, 'email_id')->constrained()->cascadeOnDelete();
+            $table->foreignIdFor(User::class, 'user_id')->constrained()->cascadeOnDelete();
             $table->string('subject');
             $table->longText('message');
             $table->timestamps();
@@ -21,6 +23,6 @@ return new class extends Migration
 
     public function down(): void
     {
-        Schema::dropIfExists('emails');
+        Schema::dropIfExists('replies');
     }
 };

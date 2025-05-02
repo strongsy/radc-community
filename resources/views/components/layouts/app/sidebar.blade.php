@@ -1,4 +1,18 @@
-<!DOCTYPE html>
+<?php
+//user badges
+use App\Models\Email;
+use App\Models\User;
+
+$activeUsers = User::where('is_active', true)->where('is_blocked', false)->count();
+$blockedUsers = User::where('is_blocked', true)->count();
+$registeredUsers = User::where('is_active', false)->where('is_blocked', false)->count();
+
+//mail  badges
+$receivedMail = Email::count();
+$archivedMail = Email::onlyTrashed()->count();
+?>
+
+    <!DOCTYPE html>
 <html lang="{{ str_replace('_', '-', app()->getLocale()) }}" class="dark">
 <head>
     <title>{{ config('app.name') }}</title>
@@ -15,23 +29,48 @@
     <flux:navlist variant="outline">
         <flux:navlist.group :heading="__('Platform')" class="grid">
             <flux:navlist.item icon="home" :href="route('dashboard')" :current="request()->routeIs('dashboard')"
-                               {{----}}
                                wire:navigate>{{ __('Dashboard') }}</flux:navlist.item>
-            <flux:navlist.group heading="Users" expandable>
-                <flux:navlist.item icon="users" href="{{route('users.active')}}"
-                                   :current="request()->routeIs('users.active')" wire:navigate>
-                    {{ __('Active') }} </flux:navlist.item>
-                <flux:navlist.item icon="user-plus" href="{{ route('users.registrations') }}"
-                                   :current="request()->routeIs('users.registrations')"
-                                   wire:navigate>{{ __('Registrations') }}</flux:navlist.item>
-                <flux:navlist.item icon="no-symbol" href="{{ route('users.blocked') }}"
-                                   :current="request()->routeIs('users.blocked')"
-                                   wire:navigate>{{ __('Blocked') }}</flux:navlist.item>
-            </flux:navlist.group>
+            @can('user-approve')
+                <flux:navlist.group heading="Users" expandable>
+                    <flux:navlist.item icon="users" href="{{route('users.active')}}"
+                                       badge="{{ $activeUsers }}"
+                                       badge-color="teal"
+                                       :current="request()->routeIs('users.active')" wire:navigate>
+                        {{ __('Active') }} </flux:navlist.item>
+                    <flux:navlist.item icon="user-plus" href="{{ route('users.registrations') }}"
+                                       badge="{{ $registeredUsers }}"
+                                       badge-color="amber"
+                                       :current="request()->routeIs('users.registrations')"
+                                       wire:navigate>{{ __('Registrations') }}</flux:navlist.item>
+                    <flux:navlist.item icon="no-symbol" href="{{ route('users.blocked') }}"
+                                       badge="{{ $blockedUsers }}"
+                                       badge-color="red"
+                                       :current="request()->routeIs('users.blocked')"
+                                       wire:navigate>{{ __('Blocked') }}</flux:navlist.item>
+                </flux:navlist.group>
+            @endcan
 
-            <flux:navlist.item icon="briefcase" :href="route('activity-log')" :current="request()->routeIs('activity-log')"
-                               {{----}}
-                               wire:navigate>{{ __('Activity Log') }}</flux:navlist.item>
+            @can('activity-log-read')
+                <flux:navlist.item icon="briefcase" :href="route('activity-log')"
+                                   :current="request()->routeIs('activity-log')"
+                                   wire:navigate>{{ __('Activity Log') }}</flux:navlist.item>
+
+            @endcan
+
+            @can('mail-read')
+                <flux:navlist.group heading="Email" expandable>
+                    <flux:navlist.item icon="envelope-open" href="{{route('mail-list')}}"
+                                       badge="{{ $receivedMail }}"
+                                       badge-color="teal"
+                                       :current="request()->routeIs('mail-list')" wire:navigate>
+                        {{ __('Received') }} </flux:navlist.item>
+                    <flux:navlist.item icon="archive-box" href="{{ route('mail-archived') }}"
+                                       badge="{{ $archivedMail }}"
+                                       badge-color="red"
+                                       :current="request()->routeIs('mail-archived')"
+                                       wire:navigate>{{ __('Archived') }}</flux:navlist.item>
+                </flux:navlist.group>
+            @endcan
         </flux:navlist.group>
     </flux:navlist>
 

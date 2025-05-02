@@ -6,6 +6,7 @@ use Database\Factories\UserFactory;
 use Illuminate\Contracts\Auth\MustVerifyEmail;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
 use Illuminate\Support\Str;
@@ -39,10 +40,6 @@ class User extends Authenticatable implements MustVerifyEmail, ShouldQueue
         'is_subscribed',
         'is_active',
         'is_blocked',
-        'activated_by',
-        'activated_at',
-        'blocked_by',
-        'blocked_at',
         'unsubscribe_token',
     ];
 
@@ -105,5 +102,11 @@ class User extends Authenticatable implements MustVerifyEmail, ShouldQueue
             ->logOnly(['name', 'is_blocked', 'is_active', 'is_subscribed', 'email', 'community', 'membership'])
             ->setDescriptionForEvent(fn (string $eventName) => "This user has been {$eventName}");
         // Chain fluent methods for configuration options
+    }
+
+    // relationships
+    public function replies(): HasMany
+    {
+        return $this->hasMany(Reply::class);
     }
 }

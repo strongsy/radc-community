@@ -127,6 +127,7 @@ new class extends Component {
 
             activity()->log($user->name . ' was deleted from Active Users.');
 
+
             Flux::toast(
                 heading: 'Success',
                 text: 'User deleted successfully.',
@@ -234,6 +235,12 @@ new class extends Component {
                         wire:model.live.debounce.500ms="search"/>
         </div>
     </div>
+
+    <x-search-and-sort
+        :search="$search"
+        :sortBy="$sortBy"
+        :sortDirection="$sortDirection"
+    />
 
     <flux:separator variant="subtle"/>
 

@@ -30,7 +30,7 @@ new #[Layout('components.layouts.auth')] class extends Component {
     /**
      * Handle an incoming registration request.
      */
-    public function contact(): void
+    public function contact()
     {
         $validated = $this->validate([
             'sender_name' => ['required', 'string', 'max:255'],
@@ -50,13 +50,8 @@ new #[Layout('components.layouts.auth')] class extends Component {
 
         $this->reset();
 
-        Flux::toast(
-            heading: 'Success',
-            text: 'Your message has been sent successfully.',
-            variant: 'success',
-        );
-
-        $this->redirectIntended(route('home', absolute: false), navigate: true);
+        //redirect to the welcome page with a toast notification
+        return redirect(route('home'))->with('status', 'Thank you for contacting us. We will reply to your message shortly.');
     }
 }; ?>
 
