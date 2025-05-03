@@ -34,7 +34,7 @@ return new class extends Migration
             $table->integer('finished_at')->nullable();
         });
 
-        Schema::create('failed_jobs', function (Blueprint $table) {
+        Schema::create('failed_jobs', static function (Blueprint $table) {
             $table->id();
             $table->string('uuid')->unique();
             $table->text('connection');

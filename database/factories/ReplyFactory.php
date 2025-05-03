@@ -19,7 +19,7 @@ class ReplyFactory extends Factory
             'user_id' => User::factory(),
             'subject' => $this->faker->words(10, true),
             'message' => $this->faker->paragraphs(5, true),
-            'created_at' => $this->faker->dateTimeBetween('-1 month', 'now'),
+            'created_at' => $this->faker->dateTimeBetween('-1 month'),
             'updated_at' => function (array $attributes) {
                 return $attributes['created_at'];
             },
@@ -37,7 +37,7 @@ class ReplyFactory extends Factory
             return [
                 'email_id' => $email->id,
                 // Ensure reply is created after the email
-                'created_at' => $this->faker->dateTimeBetween($email->created_at, 'now'),
+                'created_at' => $this->faker->dateTimeBetween($email->created_at),
             ];
         });
     }

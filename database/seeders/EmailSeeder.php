@@ -18,7 +18,7 @@ class EmailSeeder extends Seeder
         // Create a variety of emails with different creation dates
         // Recent emails (last week)
         Email::factory(10)->create([
-            'created_at' => $faker->dateTimeBetween('-1 week', 'now'),
+            'created_at' => $faker->dateTimeBetween('-1 week'),
             'updated_at' => function (array $attributes) {
                 return $attributes['created_at'];
             },
@@ -45,7 +45,7 @@ class EmailSeeder extends Seeder
             Email::factory()->create([
                 'sender_email' => $email,
                 'sender_name' => explode('@', $email)[0],
-                'created_at' => $faker->dateTimeBetween('-2 months', 'now'),
+                'created_at' => $faker->dateTimeBetween('-2 months'),
                 'updated_at' => function (array $attributes) {
                     return $attributes['created_at'];
                 },

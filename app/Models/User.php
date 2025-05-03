@@ -67,6 +67,35 @@ class User extends Authenticatable implements MustVerifyEmail, ShouldQueue
         ];
     }
 
+    public function eventComments(): HasMany
+    {
+        return $this->hasMany(Comment::class);
+    }
+
+    /**
+     * Images uploaded by the user to event galleries
+     */
+    public function galleryUploads(): HasMany
+    {
+        return $this->hasMany(Gallery::class);
+    }
+
+    /**
+     * Notification preferences for this user
+     */
+    public function notificationPreferences(): HasMany
+    {
+        return $this->hasMany(UserNotification::class);
+    }
+
+    /**
+     * Notifications directed to this user
+     */
+    public function eventNotifications(): HasMany
+    {
+        return $this->hasMany(EventNotification::class);
+    }
+
     public function getFirstNameAttribute(): string
     {
         return explode(' ', $this->name)[0];
@@ -100,7 +129,9 @@ class User extends Authenticatable implements MustVerifyEmail, ShouldQueue
     {
         return LogOptions::defaults()
             ->logOnly(['name', 'is_blocked', 'is_active', 'is_subscribed', 'email', 'community', 'membership'])
-            ->setDescriptionForEvent(fn (string $eventName) => "This user has been {$eventName}");
+            ->setDescriptionForEvent(fn (string $eventName) => "This user has been $eventName")
+            ->useLogName('user')
+            ->logOnlyDirty();
         // Chain fluent methods for configuration options
     }
 

@@ -25,25 +25,13 @@ class CounterBadge extends Component
 
     public function updateCount()
     {
-        switch ($this->type) {
-            case 'activeUsers':
-                $this->count = User::where('is_active', true)->where('is_blocked', false)->count();
-                break;
-            case 'blockedUsers':
-                $this->count = User::where('is_blocked', true)->count();
-                break;
-            case 'registeredUsers':
-                $this->count = User::where('is_active', false)->where('is_blocked', false)->count();
-                break;
-            case 'receivedMail':
-                $this->count = Email::count();
-                break;
-            case 'archivedMail':
-                $this->count = Email::onlyTrashed()->count();
-                break;
-            default:
-                $this->count = 0;
-                break;
-        }
+        $this->count = match ($this->type) {
+            'activeUsers' => User::where('is_active', true)->where('is_blocked', false)->count(),
+            'blockedUsers' => User::where('is_blocked', true)->count(),
+            'registeredUsers' => User::where('is_active', false)->where('is_blocked', false)->count(),
+            'receivedMail' => Email::count(),
+            'archivedMail' => Email::onlyTrashed()->count(),
+            default => 0,
+        };
     }
 }

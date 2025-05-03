@@ -61,9 +61,9 @@ new class extends Component {
             $user = User::with('roles')->findOrFail($user_id);
 
             $this->user = [
-                'id' => $user->id ?? 'No ID',
-                'name' => $user->name ?? 'No Name',
-                'roles' => $user->roles ? $user->roles->pluck('name')->toArray() : [],
+                'id' => $this->user->id ?? 'No ID',
+                'name' => $this->user->name ?? 'No Name',
+                'roles' => $this->user->roles ? $this->user->roles->pluck('name')->toArray() : [],
             ];
 
             // Load all available roles (hardcoded or fetched from a Role model)
@@ -124,9 +124,6 @@ new class extends Component {
             }
 
             $user->delete();
-
-            activity()->log($user->name . ' was deleted from Active Users.');
-
 
             Flux::toast(
                 heading: 'Success',

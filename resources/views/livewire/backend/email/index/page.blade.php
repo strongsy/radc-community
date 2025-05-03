@@ -28,6 +28,7 @@ new class extends Component {
 
     public string $emailId = '';
 
+
     /**
      * Apply search filters to a query.
      *
@@ -117,9 +118,6 @@ new class extends Component {
                 'message' => $this->message,
             ]);
 
-            activity()->log('email replied to');
-
-
             $emailModel = Email::findOrFail($this->emailId);
             Mail::to($this->email)->queue(new ReplyToSenderMail($emailModel));
 
@@ -152,8 +150,6 @@ new class extends Component {
             $this->authorize('delete', $mail);
 
             $mail->delete();
-
-            activity()->log('email archived');
 
             Flux::toast(
                 heading: 'Mail Archived.',

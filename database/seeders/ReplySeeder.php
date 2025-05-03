@@ -79,6 +79,8 @@ class ReplySeeder extends Seeder
 
     /**
      * Generate a reply message based on the original email content
+     *
+     * @throws RandomException
      */
     private function generateReplyMessage(string $originalMessage, int $replyIndex): string
     {
@@ -91,10 +93,10 @@ class ReplySeeder extends Seeder
             "I appreciate your email. Let me provide some information that might help:\n\n",
         ];
 
-        $reply = $replies[$replyIndex % count($replies)].$faker->paragraphs(rand(1, 3), true);
+        $reply = $replies[$replyIndex % count($replies)].$faker->paragraphs(random_int(1, 3), true);
 
         // Add quoted original message for some replies
-        if (rand(0, 1)) {
+        if (random_int(0, 1)) {
             $reply .= "\n\n----- Original Message -----\n\n";
             $reply .= $originalMessage;
         }
@@ -111,11 +113,9 @@ class ReplySeeder extends Seeder
         $minHours = 1 + ($replyIndex * 2); // First reply at least 1 hour later, then 3, 5, 7...
         $maxHours = 24 + ($replyIndex * 12); // Maximum delay increases with each reply
 
-        $faker = Factory::create();
-
-        return $faker->dateTimeBetween(
-            $emailTimestamp->format('Y-m-d H:i:s')." +{$minHours} hours",
-            $emailTimestamp->format('Y-m-d H:i:s')." +{$maxHours} hours"
+        return Factory::create()->dateTimeBetween(
+            $emailTimestamp->format('Y-m-d H:i:s')." +$minHours hours",
+            $emailTimestamp->format('Y-m-d H:i:s')." +$maxHours hours"
         );
     }
 }

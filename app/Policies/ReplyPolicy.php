@@ -10,17 +10,38 @@ class ReplyPolicy
 {
     use HandlesAuthorization;
 
-    public function viewAny(User $user): bool {}
+    public function viewAny(User $user): bool
+    {
+        return $user->hasPermissionTo('reply-list');
+    }
 
-    public function view(User $user, Reply $reply): bool {}
+    public function view(User $user, Reply $reply): bool
+    {
+        return $user->hasPermissionTo($reply, 'reply-list');
+    }
 
-    public function create(User $user): bool {}
+    public function create(User $user): bool
+    {
+        return $user->hasPermissionTo('reply-create');
+    }
 
-    public function update(User $user, Reply $reply): bool {}
+    public function update(User $user, Reply $reply): bool
+    {
+        return $user->hasPermissionTo($reply, 'reply-update');
+    }
 
-    public function delete(User $user, Reply $reply): bool {}
+    public function delete(User $user, Reply $reply): bool
+    {
+        return $user->hasPermissionTo($reply, 'reply-destroy');
+    }
 
-    public function restore(User $user, Reply $reply): bool {}
+    public function restore(User $user, Reply $reply): bool
+    {
+        return $user->hasPermissionTo($reply, 'reply-restore');
+    }
 
-    public function forceDelete(User $user, Reply $reply): bool {}
+    public function forceDelete(User $user, Reply $reply): bool
+    {
+        return $user->hasPermissionTo($reply, 'reply-force-delete');
+    }
 }

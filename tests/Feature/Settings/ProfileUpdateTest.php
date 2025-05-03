@@ -1,5 +1,7 @@
 <?php
 
+/** @noinspection ALL */
+
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 

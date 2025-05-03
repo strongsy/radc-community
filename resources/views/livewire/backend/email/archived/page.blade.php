@@ -3,6 +3,7 @@
 use App\Mail\ReplyToSenderMail;
 use App\Models\Email;
 use App\Models\Reply;
+use App\Models\User;
 use App\Traits\WithSortingAndSearching;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Mail;
@@ -93,6 +94,11 @@ new class extends Component {
             $email = Email::withTrashed()->find($emailId);
             $email->forceDelete();
 
+            activity()
+                ->performedOn($mail)
+                ->event('deleted')
+                ->log('The user has deleted the email.');
+
             // Show a success message
             Flux::toast(
                 heading: 'Mail Deleted.',
@@ -100,8 +106,8 @@ new class extends Component {
                 variant: 'success',
             );
 
-            activity()->log('email permanently deleted');
-        }else {
+            //activity()->log('email permanently deleted');
+        } else {
             abort(403, 'You are not authorised to permanently delete emails!');
         }
     }

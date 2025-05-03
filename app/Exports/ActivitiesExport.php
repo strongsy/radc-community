@@ -23,6 +23,7 @@ class ActivitiesExport implements FromQuery, WithHeadings, WithMapping
                 'log_name',
                 'description',
                 'event',
+                'subject_id',
                 'causer_id',
                 'causer_type',
                 'properties',

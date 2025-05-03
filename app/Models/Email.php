@@ -26,7 +26,9 @@ class Email extends Model implements shouldQueue
     {
         return LogOptions::defaults()
             ->logOnly(['sender_name', 'sender_email', 'subject'])
-            ->setDescriptionForEvent(fn (string $eventName) => "This email has been {$eventName}");
+            ->setDescriptionForEvent(fn (string $eventName) => "This email has been $eventName")
+            ->useLogName('mail')
+            ->logOnlyDirty();
         // Chain fluent methods for configuration options
     }
 
