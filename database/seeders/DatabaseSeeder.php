@@ -20,10 +20,10 @@ class DatabaseSeeder extends Seeder
         $roleAndPermissionSeeder = new RoleAndPermissionSeeder;
         $roleAndPermissionSeeder->run(); // Call the run method on the instance
         // Then emails
-        $this->call(EmailSeeder::class);
-
-        // Then replies (which depend on emails)
-        $this->call(ReplySeeder::class);
+        $this->call([
+            EmailSeeder::class,
+            ReplySeeder::class,
+        ]);
 
         /**
          * create a super admin user

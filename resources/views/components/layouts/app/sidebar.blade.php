@@ -2,6 +2,7 @@
 //user badges
 use App\Models\Email;
 use App\Models\User;
+use App\Models\Event;
 
 $activeUsers = User::where('is_active', true)->where('is_blocked', false)->count();
 $blockedUsers = User::where('is_blocked', true)->count();
@@ -10,6 +11,9 @@ $registeredUsers = User::where('is_active', false)->where('is_blocked', false)->
 //mail  badges
 $receivedMail = Email::count();
 $archivedMail = Email::onlyTrashed()->count();
+
+//event badges
+/*$activeEvents = Event::count();*/
 ?>
 
     <!DOCTYPE html>
@@ -71,6 +75,14 @@ $archivedMail = Email::onlyTrashed()->count();
                                        wire:navigate>{{ __('Archived') }}</flux:navlist.item>
                 </flux:navlist.group>
             @endcan
+
+            {{--@can('event-read')
+                <flux:navlist.item icon="calendar" href="{{ route('event-list') }}"
+                                   badge="{{ $activeEvents }}"
+                                   badge-color="teal"
+                :current="request()->routeIs('event-list')"
+                wire:navigate>{{ __('Events') }}</flux:navlist.item>
+            @endcan--}}
         </flux:navlist.group>
     </flux:navlist>
 

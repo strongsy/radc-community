@@ -72,6 +72,9 @@ Route::middleware(['auth'])->group(function () {
     // mail views
     Volt::route('mail-list', 'backend.email.index.page')->name('mail-list')->middleware('can:mail-read');
     Volt::route('mail-archived', 'backend.email.archived.page')->name('mail-archived')->middleware('can:mail-restore');
+
+    // event views
+    Volt::route('event-list', 'backend.events.index.page')->name('event-list')->middleware('can:event-read');
 });
 
 require __DIR__.'/auth.php';
