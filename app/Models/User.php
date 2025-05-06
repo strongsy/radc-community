@@ -6,6 +6,7 @@ use Database\Factories\UserFactory;
 use Illuminate\Contracts\Auth\MustVerifyEmail;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
+use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
@@ -67,34 +68,103 @@ class User extends Authenticatable implements MustVerifyEmail, ShouldQueue
         ];
     }
 
-    public function eventComments(): HasMany
+   //relationships
+    /**
+     * Get the events organized by the user.
+     */
+    public function organizedEvents()
     {
-        return $this->hasMany(Comment::class);
+        return $this->hasMany(Event::class);
     }
 
     /**
-     * Images uploaded by the user to event galleries
+     * Get the events the user is attending.
      */
-    public function galleryUploads(): HasMany
+    public function attendingEvents(): BelongsToMany
+    {
+        return $this->belongsToMany(Event::class, 'event_attendees')
+            ->withPivot('is_attending')
+            ->withTimestamps();
+    }
+
+    //Relationships
+
+    /**
+     * Get the guests the user has invited to events.
+     */
+    public function eventGuests(): HasMany
+    {
+        return $this->hasMany(EventGuest::class);
+    }
+
+    /**
+     * Get the posts created by the user.
+     */
+    public function posts(): HasMany
+    {
+        return $this->hasMany(Post::class);
+    }
+
+    /**
+     * Get the articles created by the user.
+     */
+    public function articles(): HasMany
+    {
+        return $this->hasMany(Article::class);
+    }
+
+    /**
+     * Get the stories created by the user.
+     */
+    public function stories(): HasMany
+    {
+        return $this->hasMany(Story::class);
+    }
+
+    /**
+     * Get the galleries created by the user.
+     */
+    public function galleries(): HasMany
     {
         return $this->hasMany(Gallery::class);
     }
 
     /**
-     * Notification preferences for this user
+     * Get the comments created by the user.
      */
-    public function notificationPreferences(): HasMany
+    public function comments(): HasMany
     {
-        return $this->hasMany(UserNotification::class);
+        return $this->hasMany(Comment::class);
     }
 
     /**
-     * Notifications directed to this user
+     * Get the images uploaded by the user.
      */
-    public function eventNotifications(): HasMany
+    public function images(): HasMany
     {
-        return $this->hasMany(EventNotification::class);
+        return $this->hasMany(Image::class);
     }
+
+    /**
+     * Get the likes given by the user.
+     */
+    public function likes(): HasMany
+    {
+        return $this->hasMany(Like::class);
+    }
+
+    public function commentReplies(): HasMany
+    {
+        return $this->hasMany(CommentReply::class);
+    }
+
+    public function replies(): HasMany
+    {
+        return $this->hasMany(Reply::class);
+    }
+
+
+    //functions
 
     public function getFirstNameAttribute(): string
     {
@@ -135,9 +205,4 @@ class User extends Authenticatable implements MustVerifyEmail, ShouldQueue
         // Chain fluent methods for configuration options
     }
 
-    // relationships
-    public function replies(): HasMany
-    {
-        return $this->hasMany(Reply::class);
-    }
 }

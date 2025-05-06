@@ -58,26 +58,32 @@ new class extends Component {
     #[NoReturn] public function assignRolesToUser(mixed $user_id): void
     {
         if (Auth::user() && Auth::user()->can('user-update')) {
+
+            $userRoles = $user->roles->pluck('name')->toArray();
+
             $user = User::with('roles')->findOrFail($user_id);
 
+            $userRoles = $user->roles?->pluck('name')->toArray() ?? [];
+
+            // Now convert to array
             $this->user = [
-                'id' => $this->user->id ?? 'No ID',
-                'name' => $this->user->name ?? 'No Name',
-                'roles' => $this->user->roles ? $this->user->roles->pluck('name')->toArray() : [],
+                'id' => $user->id ?? 'No ID',
+                'name' => $user->name ?? 'No Name',
+                'roles' => $userRoles,
             ];
 
             // Load all available roles (hardcoded or fetched from a Role model)
             $this->availableRoles = ['admin', 'editor', 'moderator', 'user'];
 
             // Pre-select roles already assigned to the user
-            $this->selectedRoles = $this->user['roles'] ?? [];
+            $this->selectedRoles = $userRoles;
 
             $this->showUserRolesModal = true;
         } else {
             abort(403, 'You are not authorised to assign roles to users!');
         }
-
     }
+
 
     public function saveRoles(): void
     {

@@ -53,12 +53,14 @@ new class extends Component {
         }
 
         return $query->where(function ($q) {
-            $q->where('email', 'like', '%' . $this->search . '%')
-                ->orWhere('name', 'like', '%' . $this->search . '%');
+            $q->whereHas('organizer', function ($userQuery) {
+                $userQuery->where('name', 'like', '%' . $this->search . '%');
+            })
+                ->orWhere('event_title', 'like', '%' . $this->search . '%');
         });
     }
 
-    public function showCreate()
+    public function showCreate(): void
     {
         $this->showCreateModal = true;
     }
@@ -71,7 +73,7 @@ new class extends Component {
 
     public function with(): array
     {
-        $query = Event::query()->with('user');
+        $query = Event::query()->with('organizer')->with('category');
 
         // Apply search and order
         $filtered = $this->applySearchFilters($query);
@@ -86,8 +88,6 @@ new class extends Component {
             'events' => $paginated,
         ];
     }
-
-
 }
 ?>
 
@@ -119,11 +119,12 @@ new class extends Component {
 
     <flux:table :paginate="$events">
         <flux:table.columns>
-            <flux:table.column>Creator</flux:table.column>
+            <flux:table.column sortable :sorted="$sortBy === 'organizer'" :direction="$sortDirection"
+                               wire:click="sort('organizer')">Creator</flux:table.column>
             <flux:table.column>Title</flux:table.column>
-            <flux:table.column>Starts</flux:table.column>
-            <flux:table.column>Ends</flux:table.column>
-            {{--<flux:table.column>Category</flux:table.column>--}}
+            <flux:table.column>Date</flux:table.column>
+            <flux:table.column>Time</flux:table.column>
+            <flux:table.column>Category</flux:table.column>
             <flux:table.column>Status</flux:table.column>
             <flux:table.column>Actions</flux:table.column>
         </flux:table.columns>
@@ -131,12 +132,12 @@ new class extends Component {
         <flux:table.rows>
             @forelse ($events as $event)
                 <flux:table.row :key="$event->id">
-                    <flux:table.cell>{{ $event->user->name ?? 'Unknown' }}</flux:table.cell>
-                    <flux:table.cell>{{ $event->title ?? 'Unknown'}}</flux:table.cell>
-                    <flux:table.cell>{{ $event->start_datetime->format('d M Y, g:i A') }}</flux:table.cell>
-                    <flux:table.cell>{{ $event->end_datetime->format('d M Y, g:i A') }}</flux:table.cell>
-                    {{--<flux:table.cell>{{ $event->category }}</flux:table.cell>--}}
-                    <flux:table.cell>{{ $event->status ?? 'Unknown' }}</flux:table.cell>
+                    <flux:table.cell>{{ $event->organizer->name ?? 'Unknown' }}</flux:table.cell>
+                    <flux:table.cell>{{ $event->event_title ?? 'Unknown'}}</flux:table.cell>
+                    <flux:table.cell>{{ $event->event_date->format('d M Y, g:i A') }}</flux:table.cell>
+                    <flux:table.cell>{{ $event->event_time->format('d M Y, g:i A') }}</flux:table.cell>
+                    <flux:table.cell>{{ $event->event_type }}</flux:table.cell>
+                    <flux:table.cell>{{ $event->event_status ?? 'Unknown' }}</flux:table.cell>
                     <flux:table.cell>
                         <flux:dropdown position="bottom" align="end" offset="-15">
                             <flux:button variant="ghost" size="sm" icon="ellipsis-horizontal"
