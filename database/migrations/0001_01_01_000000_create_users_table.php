@@ -1,5 +1,7 @@
 <?php
 
+use App\Models\Community;
+use App\Models\Membership;
 use Illuminate\Database\Migrations\Migration;
 use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Support\Facades\Schema;
@@ -17,8 +19,8 @@ return new class extends Migration
             $table->string('email')->unique();
             $table->timestamp('email_verified_at')->nullable();
             $table->string('password');
-            $table->foreignIdFor(\App\Models\Community::class, 'community_id')->constrained()->cascadeOnDelete();
-            $table->foreignIdFor(\App\Models\Membership::class, 'membership_id')->constrained()->cascadeOnDelete();
+            $table->foreignIdFor(Community::class, 'community_id')->constrained()->cascadeOnDelete();
+            $table->foreignIdFor(Membership::class, 'membership_id')->constrained()->cascadeOnDelete();
             $table->text('affiliation');
             $table->boolean('is_subscribed')->default(false);
             $table->boolean('is_active')->default(false);

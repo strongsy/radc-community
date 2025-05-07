@@ -49,7 +49,7 @@ class UserFactory extends Factory
             'is_active' => fake()->randomelement([true, false]),
             'is_blocked' => fake()->randomelement([true, false]),
             'unsubscribe_token' => Str::random(32),
-            'remember_token' => Str::random(10),
+
         ];
     }
 

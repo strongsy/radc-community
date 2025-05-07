@@ -73,7 +73,7 @@ new class extends Component {
 
         $this->name = $mailUser->sender_name;
         $this->email = $mailUser->sender_email;
-        $this->subject = $mailUser->subject;
+        $this->subject = $mailUser->email_subject;
 
 
         $this->showReplyFormId = true;
@@ -114,8 +114,8 @@ new class extends Component {
             Reply::create([
                 'email_id' => $this->emailId,
                 'user_id' => auth()->id(),
-                'subject' => $this->subject,
-                'message' => $this->message,
+                'reply_subject' => $this->subject,
+                'reply_content' => $this->message,
             ]);
 
             $emailModel = Email::findOrFail($this->emailId);
@@ -237,9 +237,9 @@ new class extends Component {
                                     Email: {{ $mail->sender_email ?? 'N/A' }}</flux:heading>
                                 <flux:text
                                     size="sm">{{ $mail->created_at->format('d M Y, g:i A') ?? 'N/A' }}</flux:text>
-                                <flux:heading size="sm" level="3">Subject: {{ $mail->subject ?? 'N/A' }}</flux:heading>
+                                <flux:heading size="sm" level="3">Subject: {{ $mail->email_subject ?? 'N/A' }}</flux:heading>
                                 <flux:text class="prose">
-                                    <x-markdown>{!! $mail->message !!}</x-markdown>
+                                    <x-markdown>{!! $mail->email_content !!}</x-markdown>
                                 </flux:text>
 
                                 <flux:separator variant="subtle" class="my-2"/>
@@ -263,9 +263,9 @@ new class extends Component {
                                     <flux:text
                                         size="sm">{{ $mail->reply->created_at->format('d M Y, g:i A') ?? 'N/A' }}</flux:text>
                                     <flux:heading size="sm" level="3">
-                                        Subject: {{ $mail->reply->subject ?? 'N/A' }}</flux:heading>
+                                        Subject: {{ $mail->reply->reply_subject ?? 'N/A' }}</flux:heading>
                                     <flux:text>
-                                        <x-markdown>{!! $mail->reply->message !!}</x-markdown>
+                                        <x-markdown>{!! $mail->reply->reply_content !!}</x-markdown>
                                     </flux:text>
                                 @else
                                     <div class="flex justify-center items-center">
@@ -334,7 +334,7 @@ new class extends Component {
                             name="subject"
                             label="Subject"
                             required="true"
-                            value="{{ $mail->subject ?? 'N/A'}}"
+                            value="{{ $mail->email_subject ?? 'N/A'}}"
                             placeholder="Enter your reply subject here..."
                             class="w-full h-full"/>
 

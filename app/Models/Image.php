@@ -5,13 +5,15 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 
-class Report extends Model
+class Image extends Model
 {
     use HasFactory;
 
     protected $fillable = [
         'user_id',
-        'reportable',
-        'reportable_reason',
+        'album_id',
+        'img_path',
+        'img_name',
+        'img_caption',
     ];
 }

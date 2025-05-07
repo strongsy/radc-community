@@ -5,13 +5,15 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 
-class Report extends Model
+class ParticipantDetail extends Model
 {
     use HasFactory;
 
     protected $fillable = [
-        'user_id',
-        'reportable',
-        'reportable_reason',
+        'detailable',
+        'notes',
+        'allergy_id',
+        'food_id',
+        'drink_id',
     ];
 }
