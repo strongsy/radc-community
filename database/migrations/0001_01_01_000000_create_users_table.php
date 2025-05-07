@@ -17,9 +17,9 @@ return new class extends Migration
             $table->string('email')->unique();
             $table->timestamp('email_verified_at')->nullable();
             $table->string('password');
-            $table->string('community');
-            $table->string('membership');
-            $table->mediumText('affiliation');
+            $table->foreignIdFor(\App\Models\Community::class, 'community_id')->constrained()->cascadeOnDelete();
+            $table->foreignIdFor(\App\Models\Membership::class, 'membership_id')->constrained()->cascadeOnDelete();
+            $table->text('affiliation');
             $table->boolean('is_subscribed')->default(false);
             $table->boolean('is_active')->default(false);
             $table->boolean('is_blocked')->default(false);

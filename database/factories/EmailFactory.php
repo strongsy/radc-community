@@ -14,13 +14,8 @@ class EmailFactory extends Factory
         return [
             'sender_name' => $this->faker->name(),
             'sender_email' => $this->faker->unique()->safeEmail(),
-            'subject' => $this->faker->words(10, true),
-            'message' => $this->faker->paragraphs(5, true),
-            'created_at' => $this->faker->dateTimeBetween('-1 month'),
-            'updated_at' => function (array $attributes) {
-                return $attributes['created_at'];
-            },
-
+            'email_subject' => $this->faker->words(10, true),
+            'email_content' => $this->faker->paragraphs(5, true),
         ];
     }
 }

@@ -14,8 +14,9 @@ class UserSeeder extends Seeder
             'name' => 'Paul Armstrong',
             'email' => 'strongs@icloud.com',
             'password' => bcrypt('ginpalsup'),
-            'community' => 'Veteran',
-            'membership' => 'Life',
+            'email_verified_at' => now(),
+            'community_id' => 3,
+            'membership_id' => 1,
             'affiliation' => 'All files within the bucket are public and are publicly accessible via the Internet via a Laravel Cloud provided URL. These buckets are typically used for publicly viewable assets like user avatars.',
             'is_subscribed' => true,
             'is_active' => true,
@@ -28,6 +29,10 @@ class UserSeeder extends Seeder
         User::factory()->count(100)->create()->each(function ($user) {
             $user->assignRole('user');
         });
+
+        foreach (User::with('roles')->get() as $user) {
+            $user->assignRole('user');
+        }
 
     }
 }

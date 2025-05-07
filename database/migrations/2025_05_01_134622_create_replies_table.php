@@ -14,10 +14,12 @@ return new class extends Migration
             $table->id();
             $table->foreignIdFor(Email::class, 'email_id')->constrained()->cascadeOnDelete();
             $table->foreignIdFor(User::class, 'user_id')->constrained()->cascadeOnDelete();
-            $table->string('subject');
-            $table->longText('message');
+            $table->string('reply_subject');
+            $table->longText('reply_content');
             $table->timestamps();
             $table->softDeletes();
+
+            $table->unique(['email_id', 'user_id']);
         });
     }
 

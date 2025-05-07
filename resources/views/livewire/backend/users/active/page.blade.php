@@ -24,6 +24,9 @@ new class extends Component {
 
     public array $user = [];
 
+    public User $selectedUser;
+
+
     public array $details = [];
 
     public array $roleColors = [
@@ -54,12 +57,16 @@ new class extends Component {
         'selectedRoles.*' => 'in_array:availableRoles', // Validates all items against $availableRoles
     ];
 
+    public function mount(User $user): void
+    {
+        $this->selectedUser = $user;
+    }
+
 
     #[NoReturn] public function assignRolesToUser(mixed $user_id): void
     {
         if (Auth::user() && Auth::user()->can('user-update')) {
 
-            $userRoles = $user->roles->pluck('name')->toArray();
 
             $user = User::with('roles')->findOrFail($user_id);
 
@@ -178,12 +185,14 @@ new class extends Component {
 
     public function read(mixed $userId): array
     {
-        $details = User::findOrFail($userId);
+        $details = $this->selectedUser::with('roles:name');
+
+        // Set the user property with the fetched details
 
         $this->viewUserModal = true;
 
         return [
-            'user' => $details,
+            'selectedUser' => $details,
         ];
 
     }
@@ -203,7 +212,7 @@ new class extends Component {
 
     public function with(): array
     {
-        $query = User::query()->with('roles:name')->where('is_active', true)->where('is_blocked', false);
+        $query = User::query()->with('roles:name')->with('entitlements')->with('community')->with('membership')->where('is_active', true)->where('is_blocked', false);
 
 
         // Apply search and order
@@ -271,6 +280,8 @@ new class extends Component {
 
             <flux:table.column>Roles</flux:table.column>
 
+            <flux:table.column>Entitlements</flux:table.column>
+
             <flux:table.column>Actions</flux:table.column>
         </flux:table.columns>
 
@@ -305,12 +316,12 @@ new class extends Component {
 
                     <flux:table.cell>
                         <flux:badge size="sm"
-                                    color="{{ $communityColors[$user->community] ?? 'N/A' }}">{{ $user->community ?? 'N/A' }}</flux:badge>
+                                    color="{{ $communityColors[$user->community->name] ?? 'N/A' }}">{{ $user->community->name ?? 'N/A' }}</flux:badge>
                     </flux:table.cell>
 
                     <flux:table.cell>
                         <flux:badge size="sm"
-                                    color="{{ $membershipColors[$user->membership] ?? 'N/A' }}">{{ $user->membership ?? 'N/A' }}</flux:badge>
+                                    color="{{ $membershipColors[$user->membership->name] ?? 'N/A' }}">{{ $user->membership->name ?? 'N/A' }}</flux:badge>
                     </flux:table.cell>
 
                     <flux:table.cell>{{ $user['created_at']->format('d M Y, g:i A') ?? 'N/A' }}</flux:table.cell>
@@ -318,7 +329,13 @@ new class extends Component {
                     <flux:table.cell>
                         @foreach ($user->roles as $role)
                             <flux:badge size="sm"
-                                        color="{{ $roleColors[$role->name] }}">{{ ucfirst($role->name) ?? 'N/A' }}</flux:badge>
+                                        color="{{ $roleColors[$role->name] ?? 'N/A' }}">{{ ucfirst($role->name) ?? 'N/A' }}</flux:badge>
+                        @endforeach
+                    </flux:table.cell>
+
+                    <flux:table.cell>
+                        @foreach ($user->entitlements as $entitlement)
+                            <flux:text>{{ $entitlement->name ?? 'None' }}</flux:text>
                         @endforeach
                     </flux:table.cell>
 
@@ -376,7 +393,9 @@ new class extends Component {
                 <div class="grid grid-cols-2 items-center justify-between gap-4 mt-5">
                     @foreach ($availableRoles as $role)
                         <label class="block">
-                            <flux:checkbox wire:model="selectedRoles" label="{{$role}}" value="{{ $role }}"/>
+                            <flux:checkbox wire:model="selectedRoles" label="{{$role}}" value="{{ $role }}"
+                                           :disabled="$role === 'user' && in_array('user', $selectedRoles, true)"
+                            />
                             {{--<input type="checkbox" wire:model="selectedRoles" value="{{ $role }}"/>
                             <span class="ml-2">{{ ucfirst($role) ?? 'N/A' }}</span>--}}
                         </label>
@@ -399,10 +418,14 @@ new class extends Component {
                 <flux:heading size="sm">Affiliation</flux:heading>
                 <flux:text>{{ $user->affiliation ?? 'Not found' }}</flux:text>
                 <flux:heading size="sm">Roles</flux:heading>
-                <flux:text>{{ $user->role ?? 'Not found'}}</flux:text>
-                <span>
-                    <flux:text variant="subtle"></flux:text>
-                </span>
+                {{--@foreach ($this->selectedUser as $role)
+
+                    <flux:badge size="sm">{{ ucfirst($role->name) ?? 'N/A' }}</flux:badge>
+                @endforeach
+
+                @foreach ($selectedUser->entitlements as $entitlement)
+                    <flux:text>{{ $entitlement ?? 'N/A' }}</flux:text>
+                @endforeach--}}
             </div>
             <div class="flex w-full items-end justify-end gap-4 mt-4">
                 <flux:button type="button" variant="primary" wire:click="viewUserModal = false">Close

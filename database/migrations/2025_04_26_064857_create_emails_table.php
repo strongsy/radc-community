@@ -12,8 +12,8 @@ return new class extends Migration
             $table->id();
             $table->string('sender_name');
             $table->string('sender_email');
-            $table->string('subject');
-            $table->longText('message');
+            $table->string('email_subject');
+            $table->longText('email_content');
             $table->timestamps();
             $table->softDeletes();
         });

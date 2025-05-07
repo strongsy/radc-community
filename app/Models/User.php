@@ -6,14 +6,15 @@ use Database\Factories\UserFactory;
 use Illuminate\Contracts\Auth\MustVerifyEmail;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
-use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
 use Illuminate\Support\Str;
 use Spatie\Activitylog\LogOptions;
 use Spatie\Activitylog\Traits\CausesActivity;
 use Spatie\Activitylog\Traits\LogsActivity;
+use Spatie\Permission\Models\Role;
 use Spatie\Permission\Traits\HasRoles;
 
 /**
@@ -32,16 +33,7 @@ class User extends Authenticatable implements MustVerifyEmail, ShouldQueue
      * @var list<string>
      */
     protected $fillable = [
-        'name',
-        'email',
-        'password',
-        'community',
-        'membership',
-        'affiliation',
-        'is_subscribed',
-        'is_active',
-        'is_blocked',
-        'unsubscribe_token',
+        'is_blocked', 'name', 'email', 'email_verified_at', 'password', 'community_id', 'membership_id', 'affiliation', 'is_subscribed', 'is_active', 'unsubscribe_token', 'remember_token',
     ];
 
     /**
@@ -64,104 +56,35 @@ class User extends Authenticatable implements MustVerifyEmail, ShouldQueue
     {
         return [
             'email_verified_at' => 'datetime',
+            'created_at' => 'datetime',
+            'updated_at' => 'datetime',
             'password' => 'hashed',
         ];
     }
 
-   //relationships
-    /**
-     * Get the events organized by the user.
-     */
-    public function organizedEvents()
+    //relationships
+    public function community(): BelongsTo
     {
-        return $this->hasMany(Event::class);
+        return $this->belongsTo(Community::class);
     }
 
-    /**
-     * Get the events the user is attending.
-     */
-    public function attendingEvents(): BelongsToMany
+    public function membership(): BelongsTo
     {
-        return $this->belongsToMany(Event::class, 'event_attendees')
-            ->withPivot('is_attending')
+        return $this->belongsTo(Membership::class);
+    }
+
+    public function entitlements(): BelongsToMany
+    {
+        return $this->belongsToMany(Entitlement::class, 'entitlement_user')
             ->withTimestamps();
     }
 
-    //Relationships
-
-    /**
-     * Get the guests the user has invited to events.
-     */
-    public function eventGuests(): HasMany
+   /* public function roles(): BelongsToMany
     {
-        return $this->hasMany(EventGuest::class);
-    }
+        return $this->belongsToMany(Role::class, 'model_has_roles', 'model_id', 'role_id');
+    }*/
 
-    /**
-     * Get the posts created by the user.
-     */
-    public function posts(): HasMany
-    {
-        return $this->hasMany(Post::class);
-    }
 
-    /**
-     * Get the articles created by the user.
-     */
-    public function articles(): HasMany
-    {
-        return $this->hasMany(Article::class);
-    }
-
-    /**
-     * Get the stories created by the user.
-     */
-    public function stories(): HasMany
-    {
-        return $this->hasMany(Story::class);
-    }
-
-    /**
-     * Get the galleries created by the user.
-     */
-    public function galleries(): HasMany
-    {
-        return $this->hasMany(Gallery::class);
-    }
-
-    /**
-     * Get the comments created by the user.
-     */
-    public function comments(): HasMany
-    {
-        return $this->hasMany(Comment::class);
-    }
-
-    /**
-     * Get the images uploaded by the user.
-     */
-    public function images(): HasMany
-    {
-        return $this->hasMany(Image::class);
-    }
-
-    /**
-     * Get the likes given by the user.
-     */
-    public function likes(): HasMany
-    {
-        return $this->hasMany(Like::class);
-    }
-
-    public function commentReplies(): HasMany
-    {
-        return $this->hasMany(CommentReply::class);
-    }
-
-    public function replies(): HasMany
-    {
-        return $this->hasMany(Reply::class);
-    }
 
 
     //functions
@@ -178,7 +101,7 @@ class User extends Authenticatable implements MustVerifyEmail, ShouldQueue
         });
 
         static::updating(static function ($user) {
-            if (! $user->unsubscribe_token) {
+            if (!$user->unsubscribe_token) {
                 $user->unsubscribe_token = Str::random(32);
             }
         });
@@ -191,7 +114,7 @@ class User extends Authenticatable implements MustVerifyEmail, ShouldQueue
     {
         return Str::of($this->name)
             ->explode(' ')
-            ->map(fn (string $name) => Str::of($name)->substr(0, 1))
+            ->map(fn(string $name) => Str::of($name)->substr(0, 1))
             ->implode('');
     }
 
@@ -199,7 +122,7 @@ class User extends Authenticatable implements MustVerifyEmail, ShouldQueue
     {
         return LogOptions::defaults()
             ->logOnly(['name', 'is_blocked', 'is_active', 'is_subscribed', 'email', 'community', 'membership'])
-            ->setDescriptionForEvent(fn (string $eventName) => "This user has been $eventName")
+            ->setDescriptionForEvent(fn(string $eventName) => "This user has been $eventName")
             ->useLogName('user')
             ->logOnlyDirty();
         // Chain fluent methods for configuration options

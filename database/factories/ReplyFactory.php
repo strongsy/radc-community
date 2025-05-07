@@ -15,14 +15,10 @@ class ReplyFactory extends Factory
     {
         return [
             // We'll set email_id during seeding instead of here
-            'email_id' => null,
+            'email_id' => Email::factory(),
             'user_id' => User::factory(),
-            'subject' => $this->faker->words(10, true),
-            'message' => $this->faker->paragraphs(5, true),
-            'created_at' => $this->faker->dateTimeBetween('-1 month'),
-            'updated_at' => function (array $attributes) {
-                return $attributes['created_at'];
-            },
+            'reply_subject' => $this->faker->words(10, true),
+            'reply_content' => $this->faker->paragraphs(5, true),
         ];
     }
 
@@ -31,7 +27,7 @@ class ReplyFactory extends Factory
      *
      * @return $this
      */
-    public function forEmail(Email $email): static
+    /*public function forEmail(Email $email): static
     {
         return $this->state(function (array $attributes) use ($email) {
             return [
@@ -40,5 +36,5 @@ class ReplyFactory extends Factory
                 'created_at' => $this->faker->dateTimeBetween($email->created_at),
             ];
         });
-    }
+    }*/
 }

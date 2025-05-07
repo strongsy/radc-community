@@ -3,7 +3,6 @@
 namespace Database\Seeders;
 
 // use Illuminate\Database\Console\Seeds\WithoutModelEvents;
-use Database\Factories\GalleryFactory;
 use Illuminate\Database\Seeder;
 
 class DatabaseSeeder extends Seeder
@@ -16,8 +15,14 @@ class DatabaseSeeder extends Seeder
 
         // remainder of the model seeders
         $this->call([
-            RoleAndPermissionSeeder::class, // Include in the array, not run manually
+            RoleAndPermissionSeeder::class,
+            CommunitySeeder::class,
+            EntitlementSeeder::class,
+            MembershipSeeder::class,
+            EmailSeeder::class,
+            ReplySeeder::class,
             UserSeeder::class,
+            EntitlementUserSeeder::class,
         ]);
     }
 }

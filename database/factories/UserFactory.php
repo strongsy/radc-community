@@ -2,6 +2,8 @@
 
 namespace Database\Factories;
 
+use App\Models\Community;
+use App\Models\Membership;
 use App\Models\User;
 use Illuminate\Database\Eloquent\Factories\Factory;
 use Illuminate\Support\Facades\Hash;
@@ -24,13 +26,24 @@ class UserFactory extends Factory
      */
     public function definition(): array
     {
+
+        // Get existing community and membership IDs
+        $communityIds = Community::pluck('id')->toArray();
+        $membershipIds = Membership::pluck('id')->toArray();
+
+        // Default IDs if tables are empty
+        $defaultCommunityId = 1;
+        $defaultMembershipId = 1;
+
+
         return [
             'name' => fake()->name(),
             'email' => fake()->unique()->safeEmail(),
-            'email_verified_at' => now(),
+            'email_verified_at' => null,
             'password' => static::$password ??= Hash::make('password'),
-            'community' => fake()->randomElement(['Serving', 'Reserve', 'Veteran', 'Civilian', 'Other']),
-            'membership' => fake()->randomElement(['Life', 'Annual', 'Unknown']),
+            'community_id' => !empty($communityIds) ? fake()->randomElement($communityIds) : $defaultCommunityId,
+            'membership_id' => !empty($membershipIds) ? fake()->randomElement($membershipIds) : $defaultMembershipId,
+
             'affiliation' => fake()->paragraphs(2, true),
             'is_subscribed' => fake()->randomelement([true, false]),
             'is_active' => fake()->randomelement([true, false]),

@@ -1,5 +1,5 @@
 <?php
-//user badges
+/*//user badges
 use App\Models\Article;
 use App\Models\Email;
 use App\Models\Gallery;
@@ -27,7 +27,7 @@ $articles = Article::count();
 $posts = Post::where('user_id', 'auth()->id()')->where('is_approved', true)->count();
 
 //stories badges
-$stories = Story::count();
+$stories = Story::count();*/
 ?>
 
     <!DOCTYPE html>
@@ -61,8 +61,6 @@ $stories = Story::count();
             <!-- articles -->
             @can('article-read')
                 <flux:navlist.item icon="newspaper" :href="route('article-list')"
-                                   badge="{{ $articles }}"
-                                   badge-color="teal"
                                    :current="request()->routeIs('article-list')"
                                    wire:navigate>{{ __('Articles') }}</flux:navlist.item>
             @endcan
@@ -71,13 +69,9 @@ $stories = Story::count();
             @can('mail-read')
                 <flux:navlist.group heading="Email" expandable>
                     <flux:navlist.item icon="envelope-open" href="{{route('mail-list')}}"
-                                       badge="{{ $receivedMail }}"
-                                       badge-color="teal"
                                        :current="request()->routeIs('mail-list')" wire:navigate>
                         {{ __('Received') }} </flux:navlist.item>
                     <flux:navlist.item icon="archive-box" href="{{ route('mail-archived') }}"
-                                       badge="{{ $archivedMail }}"
-                                       badge-color="red"
                                        :current="request()->routeIs('mail-archived')"
                                        wire:navigate>{{ __('Archived') }}</flux:navlist.item>
                 </flux:navlist.group>
@@ -86,8 +80,6 @@ $stories = Story::count();
             <!-- events -->
             @can('event-read')
                 <flux:navlist.item icon="calendar" href="{{ route('event-list') }}"
-                                   badge="{{ $activeEvents }}"
-                                   badge-color="teal"
                                    :current="request()->routeIs('event-list')"
                                    wire:navigate>{{ __('Events') }}</flux:navlist.item>
             @endcan
@@ -102,8 +94,6 @@ $stories = Story::count();
             <!-- posts -->
             @can('post-read')
                 <flux:navlist.item icon="speaker-wave" :href="route('post-list')"
-                                   badge="{{ $posts }}"
-                                   badge-color="teal"
                                    :current="request()->routeIs('post-list')"
                                    wire:navigate>{{ __('Posts') }}</flux:navlist.item>
             @endcan
@@ -111,8 +101,6 @@ $stories = Story::count();
             <!-- stories -->
             @can('story-read')
                 <flux:navlist.item icon="book-open" :href="route('story-list')"
-                                   badge="{{ $stories }}"
-                                   badge-color="teal"
                                    :current="request()->routeIs('story-list')"
                                    wire:navigate>{{ __('Stories') }}</flux:navlist.item>
             @endcan
@@ -121,18 +109,12 @@ $stories = Story::count();
             @can('user-approve')
                 <flux:navlist.group heading="Users" expandable>
                     <flux:navlist.item icon="users" href="{{route('users.active')}}"
-                                       badge="{{ $activeUsers }}"
-                                       badge-color="teal"
                                        :current="request()->routeIs('users.active')" wire:navigate>
                         {{ __('Active') }} </flux:navlist.item>
                     <flux:navlist.item icon="user-plus" href="{{ route('users.registrations') }}"
-                                       badge="{{ $registeredUsers }}"
-                                       badge-color="amber"
                                        :current="request()->routeIs('users.registrations')"
                                        wire:navigate>{{ __('Registrations') }}</flux:navlist.item>
                     <flux:navlist.item icon="no-symbol" href="{{ route('users.blocked') }}"
-                                       badge="{{ $blockedUsers }}"
-                                       badge-color="red"
                                        :current="request()->routeIs('users.blocked')"
                                        wire:navigate>{{ __('Blocked') }}</flux:navlist.item>
                 </flux:navlist.group>

@@ -1,8 +1,9 @@
 <?php
 
-use App\Jobs\NewUserJob;
 use App\Mail\AdminNewUserRegistrationMail;
 use App\Mail\UserRegistrationConfirmationMail;
+use App\Models\Community;
+use App\Models\Membership;
 use App\Models\User;
 use Illuminate\Support\Facades\Notification;
 use Illuminate\Auth\Events\Registered;
@@ -13,15 +14,28 @@ use Illuminate\Validation\Rules;
 use Livewire\Attributes\Layout;
 use Livewire\Volt\Component;
 
-new #[Layout('components.layouts.auth')] class extends Component {
+new #[Layout('components.layouts.auth')] class extends Component
+{
     public string $name = '';
     public string $email = '';
     public string $password = '';
     public string $password_confirmation = '';
-    public string $community = '';
-    public string $membership = '';
+    public int $community_id = 0;
+    public int $membership_id = 0;
     public string $affiliation = '';
     public bool $is_subscribed = false;
+    public array $communities = [];
+    public array $memberships = [];
+    // Array to store selected entitlements
+    public array $selectedEntitlements = [];
+
+
+    public function mount(): void
+    {
+        $this->communities = Community::pluck('name', 'id')->toArray();
+        $this->memberships = Membership::pluck('name', 'id')->toArray();
+    }
+
 
 
     /**
@@ -30,40 +44,48 @@ new #[Layout('components.layouts.auth')] class extends Component {
      *
      * @return Redirector Redirects to the 'home' route with a success status message.
      */
-    public function register(): Redirector
-    {
-        $validated = $this->validate([
-            'name' => ['required', 'string', 'max:255'],
-            'email' => ['required', 'string', 'lowercase', 'email', 'max:255', 'unique:' . User::class],
-            'password' => ['required', 'string', 'confirmed', Rules\Password::defaults()],
-            'community' => ['required', 'string'],
-            'membership' => ['required', 'string'],
-            'affiliation' => ['required', 'string', 'min:10', 'max:500'],
-            'is_subscribed' => ['boolean'],
-        ]);
+public function register(): Redirector
+{
+    $validated = $this->validate([
+        'name' => ['required', 'string', 'max:255'],
+        'email' => ['required', 'string', 'lowercase', 'email', 'max:255', 'unique:' . User::class],
+        'password' => ['required', 'string', 'confirmed', Rules\Password::defaults()],
+        'community_id' => ['required', 'int'],
+        'membership_id' => ['required', 'int'],
+        'affiliation' => ['required', 'string', 'min:10', 'max:500'],
+        'is_subscribed' => ['boolean'],
+    ]);
 
-        //set is_active to false
-        $validated['is_active'] = false;
+    //set is_active to false
+    $validated['is_active'] = false;
 
-        //hash the user password
-        $validated['password'] = Hash::make($validated['password']);
+    //hash the user password
+    $validated['password'] = Hash::make($validated['password']);
 
-        //add the user to the user table (is_active will be false until the user is approved for access)
-        $user = User::create($validated);
+    //add the user to the user table (is_active will be false until the user is approved for access)
+    $user = User::create($validated);
 
-        activity()->log($user->name . ' REGISTERED');
+    // Assign the 'user' role to the newly registered user
+    $user->assignRole('user');
 
-        //send the emails
-        Mail::to(config('mail.admin_email'))->queue(new AdminNewUserRegistrationMail($user));
-
-        Mail::to($user->email)->queue(new UserRegistrationConfirmationMail($user));
-
-        //reset the form
-        $this->reset();
-
-        //redirect to the welcome page with a toast notification
-        return redirect(route('home'))->with('status', 'Thank you for your registration. You will receive an email shortly if your registration is approved.');
+    if (!empty($this->selectedEntitlements)) {
+        $user->entitlements()->attach($this->selectedEntitlements);
     }
+
+
+    activity()->log($user->name . ' REGISTERED');
+
+    //send the emails
+    Mail::to(config('mail.admin_email'))->queue(new AdminNewUserRegistrationMail($user));
+
+    Mail::to($user->email)->queue(new UserRegistrationConfirmationMail($user));
+
+    //reset the form
+    $this->reset();
+
+    //redirect to the welcome page with a toast notification
+    return redirect(route('home'))->with('status', 'Thank you for your registration. You will receive an email shortly if your registration is approved.');
+}
 }; ?>
 
 <div class="flex flex-col gap-6">
@@ -122,23 +144,49 @@ new #[Layout('components.layouts.auth')] class extends Component {
         />
 
         <!-- Community -->
-        <flux:select wire:model="community" label="Community" size="sm" placeholder="Choose community..." required="">
-            <flux:select.option>Serving</flux:select.option>
-            <flux:select.option>Reserve</flux:select.option>
-            <flux:select.option>Veteran</flux:select.option>
-            <flux:select.option>Civilian</flux:select.option>
-            <flux:select.option>Other</flux:select.option>
+        <flux:select
+            wire:model="community_id"
+            label="Community"
+            size="sm"
+            placeholder="Choose community..."
+            required="">
+            <flux:select.option value="Select" @default>Select</flux:select.option>
+            @foreach($communities as $id => $name)
+                <flux:select.option value="{{ $id }}" wire:key="{{ $id }}">
+                    {{ $name }}
+                </flux:select.option>
+            @endforeach
         </flux:select>
 
         <!-- Membership -->
-        <flux:select required="" wire:model="membership" label="Membership" size="sm"
-                     placeholder="Choose membership...">
-            <flux:select.option>Life</flux:select.option>
-            <flux:select.option>Annual</flux:select.option>
-            <flux:select.option>Unknown</flux:select.option>
+        <flux:select
+            wire:model="membership_id"
+            label="Membership" size="sm"
+            placeholder="Choose membership..."
+            required="">
+            <flux:select.option value="Select" @default>Select</flux:select.option>
+            @foreach($memberships as $id => $name)
+                <flux:select.option value="{{ $id }}" wire:key="{{ $id }}">
+                    {{ $name }}
+                </flux:select.option>
+            @endforeach
         </flux:select>
 
-        <!-- Password -->
+        <flux:checkbox.group>
+            <flux:checkbox
+                wire:model="selectedEntitlements"
+                value=1
+                label="WO & Sgt Mess"
+            />
+
+            <flux:checkbox
+                wire:model="selectedEntitlements"
+                value=2
+                label="RADC Officer Mess"
+            />
+        </flux:checkbox.group>
+
+        <!-- Affiliation -->
         <flux:textarea
             wire:model="affiliation"
             :label="__('Affiliation')"
@@ -168,6 +216,6 @@ new #[Layout('components.layouts.auth')] class extends Component {
     </div>
 
     @persist('toast')
-    <flux:toast />
+    <flux:toast/>
     @endpersist
 </div>
