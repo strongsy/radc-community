@@ -35,14 +35,13 @@ class UserFactory extends Factory
         $defaultCommunityId = 1;
         $defaultMembershipId = 1;
 
-
         return [
             'name' => fake()->name(),
             'email' => fake()->unique()->safeEmail(),
             'email_verified_at' => null,
             'password' => static::$password ??= Hash::make('password'),
-            'community_id' => !empty($communityIds) ? fake()->randomElement($communityIds) : $defaultCommunityId,
-            'membership_id' => !empty($membershipIds) ? fake()->randomElement($membershipIds) : $defaultMembershipId,
+            'community_id' => ! empty($communityIds) ? fake()->randomElement($communityIds) : $defaultCommunityId,
+            'membership_id' => ! empty($membershipIds) ? fake()->randomElement($membershipIds) : $defaultMembershipId,
 
             'affiliation' => fake()->paragraphs(2, true),
             'is_subscribed' => fake()->randomelement([true, false]),

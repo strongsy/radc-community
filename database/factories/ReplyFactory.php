@@ -15,8 +15,8 @@ class ReplyFactory extends Factory
     {
         return [
             // We'll set email_id during seeding instead of here
-            'email_id' => Email::factory(),
-            'user_id' => User::factory(),
+            'email_id' => Email::inrandomOrder()->value('id'),
+            'user_id' => User::inrandomOrder()->value('id'),
             'reply_subject' => $this->faker->words(10, true),
             'reply_content' => $this->faker->paragraphs(5, true),
         ];

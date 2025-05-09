@@ -3,6 +3,9 @@
 namespace Database\Factories;
 
 use App\Models\Article;
+use App\Models\Category;
+use App\Models\Status;
+use App\Models\User;
 use Illuminate\Database\Eloquent\Factories\Factory;
 use Illuminate\Support\Carbon;
 
@@ -13,12 +16,12 @@ class ArticleFactory extends Factory
     public function definition(): array
     {
         return [
-            'user_id' => $this->faker->randomNumber(),
-            'article_title' => $this->faker->word(),
-            'article_content' => $this->faker->word(),
-            'article_cat' => $this->faker->word(),
-            'article_status' => $this->faker->word(),
-            'cover_img' => $this->faker->word(),
+            'user_id' => User::inRandomOrder()->value('id'),
+            'article_title' => $this->faker->sentence(),
+            'article_content' => $this->faker->paragraphs(5, true),
+            'category_id' => Category::inRandomOrder()->value('id'),
+            'status_id' => Status::inRandomOrder()->value('id'),
+            'cover_img' => $this->faker->imageUrl(),
             'created_at' => Carbon::now(),
             'updated_at' => Carbon::now(),
         ];

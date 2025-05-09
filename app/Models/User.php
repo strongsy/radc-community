@@ -8,6 +8,7 @@ use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
 use Illuminate\Support\Str;
@@ -62,7 +63,7 @@ class User extends Authenticatable implements MustVerifyEmail, ShouldQueue
         ];
     }
 
-    //relationships
+    // relationships
     public function community(): BelongsTo
     {
         return $this->belongsTo(Community::class);
@@ -79,15 +80,31 @@ class User extends Authenticatable implements MustVerifyEmail, ShouldQueue
             ->withTimestamps();
     }
 
-   /* public function roles(): BelongsToMany
+    public function comments(): BelongsToMany
     {
-        return $this->belongsToMany(Role::class, 'model_has_roles', 'model_id', 'role_id');
-    }*/
+        return $this->belongsToMany(Comment::class, 'comment_user')
+            ->withTimestamps();
+    }
 
+    public function replies(): BelongsToMany
+    {
+        return $this->belongsToMany(CommentReply::class, 'reply_user')
+            ->withTimestamps();
+    }
 
+    public function events(): HasMany
+    {
+        return $this->hasMany(Event::class, 'event_user')
+            ->withTimestamps();
+    }
 
+    public function author(): BelongsTo
+    {
+        return $this->belongsTo(Post::class, 'post_user')
+        ->withTimestamps();
+    }
 
-    //functions
+    // functions
 
     public function getFirstNameAttribute(): string
     {
@@ -101,7 +118,7 @@ class User extends Authenticatable implements MustVerifyEmail, ShouldQueue
         });
 
         static::updating(static function ($user) {
-            if (!$user->unsubscribe_token) {
+            if (! $user->unsubscribe_token) {
                 $user->unsubscribe_token = Str::random(32);
             }
         });
@@ -114,7 +131,7 @@ class User extends Authenticatable implements MustVerifyEmail, ShouldQueue
     {
         return Str::of($this->name)
             ->explode(' ')
-            ->map(fn(string $name) => Str::of($name)->substr(0, 1))
+            ->map(fn (string $name) => Str::of($name)->substr(0, 1))
             ->implode('');
     }
 
@@ -122,10 +139,9 @@ class User extends Authenticatable implements MustVerifyEmail, ShouldQueue
     {
         return LogOptions::defaults()
             ->logOnly(['name', 'is_blocked', 'is_active', 'is_subscribed', 'email', 'community', 'membership'])
-            ->setDescriptionForEvent(fn(string $eventName) => "This user has been $eventName")
+            ->setDescriptionForEvent(fn (string $eventName) => "This user has been $eventName")
             ->useLogName('user')
             ->logOnlyDirty();
         // Chain fluent methods for configuration options
     }
-
 }

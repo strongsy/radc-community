@@ -2,7 +2,10 @@
 
 namespace Database\Factories;
 
+use App\Models\Category;
+use App\Models\Status;
 use App\Models\Story;
+use App\Models\User;
 use Illuminate\Database\Eloquent\Factories\Factory;
 use Illuminate\Support\Carbon;
 
@@ -13,11 +16,12 @@ class StoryFactory extends Factory
     public function definition(): array
     {
         return [
-            'story_title' => $this->faker->word(),
-            'story_content' => $this->faker->word(),
-            'story_status' => $this->faker->randomNumber(),
-            'story_cat' => $this->faker->randomNumber(),
-            'cover_img' => $this->faker->word(),
+            'user_id' => User::inrandomOrder()->value('id'),
+            'story_title' => $this->faker->sentence(),
+            'story_content' => $this->faker->paragraphs(3, true),
+            'story_status' => Status::inrandomOrder()->value('id'),
+            'story_cat' => Category::inrandomOrder()->value('id'),
+            'cover_img' => $this->faker->imageUrl(),
             'created_at' => Carbon::now(),
             'updated_at' => Carbon::now(),
         ];

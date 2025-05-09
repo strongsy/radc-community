@@ -13,7 +13,7 @@ class GalleryFactory extends Factory
     public function definition(): array
     {
         return [
-            'gallery_cat' => $this->faker->randomNumber(),
+            'gallery_title' => $this->faker->randomNumber(),
             'gallery_desc' => $this->faker->word(),
             'created_at' => Carbon::now(),
             'updated_at' => Carbon::now(),

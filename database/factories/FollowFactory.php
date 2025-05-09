@@ -3,6 +3,7 @@
 namespace Database\Factories;
 
 use App\Models\Follow;
+use App\Models\User;
 use Illuminate\Database\Eloquent\Factories\Factory;
 use Illuminate\Support\Carbon;
 
@@ -13,8 +14,8 @@ class FollowFactory extends Factory
     public function definition(): array
     {
         return [
-            'follower_id' => $this->faker->randomNumber(),
-            'following_id' => $this->faker->randomNumber(),
+            'follower_id' => User::inRandomOrder()->value('id'),
+            'followed_id' => User::inRandomOrder()->value('id'),
             'created_at' => Carbon::now(),
             'updated_at' => Carbon::now(),
         ];

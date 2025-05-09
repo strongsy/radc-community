@@ -13,6 +13,7 @@ use Illuminate\Database\Eloquent\Relations\Pivot;
 class Community extends Pivot
 {
     use HasFactory;
+
     protected $fillable = [
         'name',
         'description',

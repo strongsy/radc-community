@@ -60,7 +60,7 @@ $stories = Story::count();*/
 
             <!-- articles -->
             @can('article-read')
-                <flux:navlist.item icon="newspaper" :href="route('article-list')"
+                <flux:navlist.item icon="information-circle" :href="route('article-list')"
                                    :current="request()->routeIs('article-list')"
                                    wire:navigate>{{ __('Articles') }}</flux:navlist.item>
             @endcan
@@ -89,6 +89,13 @@ $stories = Story::count();*/
                 <flux:navlist.item icon="photo" href="{{ route('gallery-list') }}"
                                    :current="request()->routeIs('gallery-list')"
                                    wire:navigate>{{ __('Galleries') }}</flux:navlist.item>
+            @endcan
+
+            <!-- news -->
+            @can('news-read')
+                <flux:navlist.item icon="newspaper" href="{{ route('news-list') }}"
+                                   :current="request()->routeIs('news-list')"
+                                   wire:navigate>{{ __('News') }}</flux:navlist.item>
             @endcan
 
             <!-- posts -->

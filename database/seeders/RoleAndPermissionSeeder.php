@@ -83,6 +83,19 @@ class RoleAndPermissionSeeder extends Seeder
         Permission::create(['name' => 'event-restore']);
         Permission::create(['name' => 'event-force-delete']);
 
+        // news permissions
+        Permission::create(['name' => 'news-registrations']);
+        Permission::create(['name' => 'news-create']);
+        Permission::create(['name' => 'news-read']);
+        Permission::create(['name' => 'news-publish']);
+        Permission::create(['name' => 'news-unpublish']);
+        Permission::create(['name' => 'news-approve']);
+        Permission::create(['name' => 'news-unapproved']);
+        Permission::create(['name' => 'news-update']);
+        Permission::create(['name' => 'news-destroy']);
+        Permission::create(['name' => 'news-restore']);
+        Permission::create(['name' => 'news-force-delete']);
+
         // post permissions
         Permission::create(['name' => 'post-registrations']);
         Permission::create(['name' => 'post-create']);

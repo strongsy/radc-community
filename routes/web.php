@@ -76,17 +76,20 @@ Route::middleware(['auth'])->group(function () {
     // event views
     Volt::route('event-list', 'backend.events.index.page')->name('event-list')->middleware('can:event-read');
 
-    //article views
+    // article views
     Volt::route('article-list', 'backend.articles.index.page')->name('article-list')->middleware('can:article-read');
 
-    //stories views
+    // stories views
     Volt::route('story-list', 'backend.stories.index.page')->name('story-list')->middleware('can:story-read');
 
-    //posts views
+    // posts views
     Volt::route('post-list', 'backend.posts.index.page')->name('post-list')->middleware('can:post-read');
 
-    //galleries views
+    // galleries views
     Volt::route('gallery-list', 'backend.galleries.index.page')->name('gallery-list')->middleware('can:gallery-read');
+
+    //news views
+    Volt::route('news-list', 'backend.news.index.page')->name('news-list')->middleware('can:news-read');
 });
 
 require __DIR__.'/auth.php';
