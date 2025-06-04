@@ -79,9 +79,17 @@ $stories = Story::count();*/
 
             <!-- events -->
             @can('event-read')
-                <flux:navlist.item icon="calendar" href="{{ route('event-list') }}"
-                                   :current="request()->routeIs('event-list')"
-                                   wire:navigate>{{ __('Events') }}</flux:navlist.item>
+                <flux:navlist.group heading="Events" expandable>
+                    <flux:navlist.item icon="calendar" href="{{ route('event-list') }}"
+                                       :current="request()->routeIs('event-list')"
+                                       wire:navigate>{{ __('List Events') }}</flux:navlist.item>
+                    <flux:navlist.item icon="plus-circle" href="{{ route('event-create') }}"
+                                       :current="request()->routeIs('event-create')"
+                                       wire:navigate>{{ __('Create Event') }}</flux:navlist.item>
+                    <flux:navlist.item icon="map-pin" href="{{ route('venue-list') }}"
+                                       :current="request()->routeIs('venue-list')"
+                                       wire:navigate>{{ __('Venues') }}</flux:navlist.item>
+                </flux:navlist.group>
             @endcan
 
             <!-- galleries -->
@@ -282,5 +290,7 @@ $stories = Story::count();*/
         {{ session('status') }}
     </div>
 @endif
+
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 </body>
 </html>

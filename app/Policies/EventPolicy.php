@@ -16,9 +16,15 @@ class EventPolicy
 
     public function create(User $user): bool {}
 
-    public function update(User $user, Event $event): bool {}
+    public function update(User $user, Event $event): bool
+    {
+        return $user->id === $event->user_id;
+    }
 
-    public function delete(User $user, Event $event): bool {}
+    public function delete(User $user, Event $event): bool
+    {
+        return $user->id === $event->user_id;
+    }
 
     public function restore(User $user, Event $event): bool {}
 

@@ -4,7 +4,10 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\Relations\MorphMany;
+use Illuminate\Database\Eloquent\Relations\MorphToMany;
 
 class News extends Model
 {
@@ -29,9 +32,14 @@ class News extends Model
         ];
     }
 
+    public function categories(): BelongsToMany
+    {
+        return $this->belongsToMany(NewsCategory::class, 'category_news', 'news_id', 'news_category_id');
+    }
+
+
     public function comments(): MorphMany
     {
         return $this->morphMany(Comment::class, 'commentable');
     }
-
 }

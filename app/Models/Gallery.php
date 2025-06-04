@@ -15,9 +15,8 @@ class Gallery extends Model
         'gallery_desc',
     ];
 
-
     public function albums(): HasMany
-        {
-           return $this->hasMany(Album::class);
-        }
+    {
+        return $this->hasMany(Album::class);
+    }
 }

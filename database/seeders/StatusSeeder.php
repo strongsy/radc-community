@@ -20,5 +20,4 @@ class StatusSeeder extends Seeder
             ['status_type' => 'Completed', 'status_desc' => 'Event has finished', 'created_at' => now(), 'updated_at' => now()],
         ]);
     }
-
 }

@@ -75,6 +75,8 @@ Route::middleware(['auth'])->group(function () {
 
     // event views
     Volt::route('event-list', 'backend.events.index.page')->name('event-list')->middleware('can:event-read');
+    Volt::route('event-create', 'backend.events.create.page')->name('event-create')->middleware('can:event-create');
+    Volt::route('venue-list', 'backend.venues.index.page')->name('venue-list')->middleware('can:event-read');
 
     // article views
     Volt::route('article-list', 'backend.articles.index.page')->name('article-list')->middleware('can:article-read');
@@ -88,7 +90,7 @@ Route::middleware(['auth'])->group(function () {
     // galleries views
     Volt::route('gallery-list', 'backend.galleries.index.page')->name('gallery-list')->middleware('can:gallery-read');
 
-    //news views
+    // news views
     Volt::route('news-list', 'backend.news.index.page')->name('news-list')->middleware('can:news-read');
 });
 

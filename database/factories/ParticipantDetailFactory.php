@@ -16,6 +16,7 @@ class ParticipantDetailFactory extends Factory
     public function definition(): array
     {
         $models = $this->faker->randomElement(['App\Models\Post', 'App\Models\Event', 'App\Models\Story', 'App\Models\Article']);
+
         return [
             'detailable_id' => $models::factory(),
             'detailable_type' => $models,

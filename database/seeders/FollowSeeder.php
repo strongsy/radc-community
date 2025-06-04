@@ -23,9 +23,9 @@ class FollowSeeder extends Seeder
             $following = $users->where('id', '!=', $follower->id)->random(random_int(2, 5))->pluck('id');
 
             foreach ($following as $followedId) {
-                $pairKey = $follower->id . '-' . $followedId;
+                $pairKey = $follower->id.'-'.$followedId;
 
-                if (!isset($existingPairs[$pairKey])) {
+                if (! isset($existingPairs[$pairKey])) {
                     $follows[] = [
                         'follower_id' => $follower->id,
                         'followed_id' => $followedId,
@@ -41,4 +41,3 @@ class FollowSeeder extends Seeder
         DB::table('follows')->insert($follows);
     }
 }
-

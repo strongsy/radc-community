@@ -111,6 +111,12 @@ select:focus[data-flux-control] {
     font-style: italic;
 }
 
+.ProseMirror, .tox-editor-container, .tiptap-editor {
+    max-width: 100% !important;
+    overflow-wrap: break-word;
+    word-break: break-word;
+}
+
 
 
 /* \[:where(&)\]:size-4 {

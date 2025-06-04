@@ -2,8 +2,8 @@
 
 namespace Database\Factories;
 
-use App\Models\Category;
 use App\Models\News;
+use App\Models\NewsCategory;
 use App\Models\Status;
 use App\Models\User;
 use Illuminate\Database\Eloquent\Factories\Factory;
@@ -19,7 +19,7 @@ class NewsFactory extends Factory
             'user_id' => User::inrandomOrder()->value('id'),
             'news_title' => $this->faker->sentence(),
             'news_content' => $this->faker->paragraphs(3, true),
-            'news_cat' => Category::inRandomOrder()->value('id'),
+            'news_category_id' => NewsCategory::inRandomOrder()->value('id'),
             'news_status' => Status::inRandomOrder()->value('id'),
             'release_at' => Carbon::now(),
             'expires_at' => Carbon::now(),

@@ -12,7 +12,6 @@ class DatabaseSeeder extends Seeder
      */
     public function run(): void
     {
-
         // remainder of the model seeders
         $this->call([
             RoleAndPermissionSeeder::class,
@@ -32,7 +31,14 @@ class DatabaseSeeder extends Seeder
             ArticleSeeder::class,
             NewsSeeder::class,
             StorySeeder::class,
+            VenueSeeder::class,
+            EventTitleSeeder::class,
             EventSeeder::class,
+            CategoryEventSeeder::class,
+            CategoryNewsSeeder::class,
+            CategoryArticleSeeder::class,
+            CategoryStorySeeder::class,
+            //CategorySeeder::class,
             EntitlementUserSeeder::class,
             EventGuestSeeder::class,
             EventUserSeeder::class,

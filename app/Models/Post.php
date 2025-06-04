@@ -5,7 +5,7 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
-use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\Relations\MorphMany;
 
 class Post extends Model
@@ -19,9 +19,9 @@ class Post extends Model
         'post_status',
     ];
 
-    public function user(): HasMany
+    public function user(): BelongsTo
     {
-        return $this->hasMany(User::class, 'user_id');
+        return $this->belongsTo(User::class);
     }
 
     public function comments(): MorphMany
@@ -49,4 +49,8 @@ class Post extends Model
         return $this->morphMany(Rating::class, 'ratable');
     }
 
+    public function categories(): BelongsToMany
+    {
+        return $this->belongsToMany(Category::class);
+    }
 }

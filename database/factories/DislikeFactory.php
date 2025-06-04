@@ -14,6 +14,7 @@ class DislikeFactory extends Factory
     public function definition(): array
     {
         $models = $this->faker->randomElement(['App\Models\Post', 'App\Models\Event', 'App\Models\Story', 'App\Models\Article']);
+
         return [
             'user_id' => User::inRandomOrder()->value('id'),
             'dislikeable_id' => $models::factory(),

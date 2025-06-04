@@ -9,8 +9,5 @@ class ArticlePolicy
 {
     use HandlesAuthorization;
 
-    public function action(User $user): bool
-    {
-
-    }
+    public function action(User $user): bool {}
 }

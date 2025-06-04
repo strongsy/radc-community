@@ -10,6 +10,7 @@ use Livewire\Attributes\Computed;
 use Livewire\Attributes\Url;
 use Livewire\Volt\Component;
 use Livewire\WithPagination;
+use Flux\Flux;
 
 new class extends Component {
     use WithPagination, WithSortingAndSearching;
@@ -25,7 +26,6 @@ new class extends Component {
     public array $user = [];
 
     public User $selectedUser;
-
 
     public array $details = [];
 
@@ -112,8 +112,8 @@ new class extends Component {
             $this->selectedRoles = [];
 
             Flux::toast(
-                heading: 'Success',
                 text: 'User roles updated successfully.',
+                heading: 'Success',
                 variant: 'success',
             );
         } else {
@@ -129,8 +129,8 @@ new class extends Component {
             if ($user->hasRole('super-admin')) {
 
                 Flux::toast(
-                    heading: 'Cannot proceed',
                     text: 'Super-admin users cannot be deleted.',
+                    heading: 'Cannot proceed',
                     variant: 'danger',
                 );
                 return;
@@ -139,8 +139,8 @@ new class extends Component {
             $user->delete();
 
             Flux::toast(
-                heading: 'Success',
                 text: 'User deleted successfully.',
+                heading: 'Success',
                 variant: 'success',
             );
 
@@ -157,8 +157,8 @@ new class extends Component {
             if ($user->hasRole('super-admin')) {
 
                 Flux::toast(
-                    heading: 'Cannot proceed',
                     text: 'Super-admin users cannot be blocked.',
+                    heading: 'Cannot proceed',
                     variant: 'danger',
                 );
                 return;
@@ -173,8 +173,8 @@ new class extends Component {
             activity()->log($user->name . ' was blocked.');
 
             Flux::toast(
-                heading: 'Success',
                 text: 'User blocked successfully.',
+                heading: 'Success',
                 variant: 'success',
             );
 

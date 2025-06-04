@@ -15,7 +15,6 @@ use Illuminate\Support\Str;
 use Spatie\Activitylog\LogOptions;
 use Spatie\Activitylog\Traits\CausesActivity;
 use Spatie\Activitylog\Traits\LogsActivity;
-use Spatie\Permission\Models\Role;
 use Spatie\Permission\Traits\HasRoles;
 
 /**
@@ -34,7 +33,18 @@ class User extends Authenticatable implements MustVerifyEmail, ShouldQueue
      * @var list<string>
      */
     protected $fillable = [
-        'is_blocked', 'name', 'email', 'email_verified_at', 'password', 'community_id', 'membership_id', 'affiliation', 'is_subscribed', 'is_active', 'unsubscribe_token', 'remember_token',
+        'is_blocked',
+        'name',
+        'email',
+        'email_verified_at',
+        'password',
+        'community_id',
+        'membership_id',
+        'affiliation',
+        'is_subscribed',
+        'is_active',
+        'unsubscribe_token',
+        'remember_token',
     ];
 
     /**
@@ -61,6 +71,12 @@ class User extends Authenticatable implements MustVerifyEmail, ShouldQueue
             'updated_at' => 'datetime',
             'password' => 'hashed',
         ];
+    }
+
+    public function allergies(): BelongsToMany
+    {
+        return $this->belongsToMany(Allergy::class, 'allergy_user')
+            ->withTimestamps();
     }
 
     // relationships
@@ -101,11 +117,30 @@ class User extends Authenticatable implements MustVerifyEmail, ShouldQueue
     public function author(): BelongsTo
     {
         return $this->belongsTo(Post::class, 'post_user')
-        ->withTimestamps();
+            ->withTimestamps();
+    }
+
+    public function event(): HasMany
+    {
+        return $this->hasMany(Event::class, 'user_id')
+            ->withTimestamps();
+    }
+
+    // Users that this user is following
+    public function following(): BelongsToMany
+    {
+        return $this->belongsToMany(__CLASS__, 'follows', 'follower_id', 'following_id')
+            ->withTimestamps();
+    }
+
+// Users that are following this user
+    public function followers(): BelongsToMany
+    {
+        return $this->belongsToMany(__CLASS__, 'follows', 'following_id', 'follower_id')
+            ->withTimestamps();
     }
 
     // functions
-
     public function getFirstNameAttribute(): string
     {
         return explode(' ', $this->name)[0];

@@ -26,6 +26,21 @@ new class extends Component {
     public bool $showCreateModal = false;
     public bool $showEditModal = false;
 
+    public array $categoryColors = [
+        'Curry' => 'yellow',
+        'Food' => 'red',
+        'Achievements' => 'blue',
+        'Awards' => 'green',
+        'Sport' => 'purple',
+        'Promotion' => 'amber',
+        'Commission' => 'slate',
+        'Birth' => 'rose',
+        'Death' => 'black',
+        'Marriage' => 'white',
+        'Social' => 'emerald',
+        'Other' => 'indigo',
+    ];
+
 
     protected function rules(): array
     {
@@ -73,7 +88,7 @@ new class extends Component {
 
     public function with(): array
     {
-        $query = Event::query()->with('organizer')->with('category');
+        $query = Event::query()->with('organizer')->with('categories')->with('title')->orderBy('event_date');
 
         // Apply search and order
         $filtered = $this->applySearchFilters($query);
@@ -120,12 +135,16 @@ new class extends Component {
     <flux:table :paginate="$events">
         <flux:table.columns>
             <flux:table.column sortable :sorted="$sortBy === 'organizer'" :direction="$sortDirection"
-                               wire:click="sort('organizer')">Creator</flux:table.column>
+                               wire:click="sort('organizer')">Creator
+            </flux:table.column>
             <flux:table.column>Title</flux:table.column>
-            <flux:table.column>Date</flux:table.column>
+            <flux:table.column sortable :sorted="$sortBy === 'event_date'" :direction="$sortDirection"
+                               wire:click="sort('event_date')">Date
+            </flux:table.column>
             <flux:table.column>Time</flux:table.column>
-            <flux:table.column>Category</flux:table.column>
-            <flux:table.column>Status</flux:table.column>
+            <flux:table.column sortable :sorted="$sortBy === 'category_id'" :direction="$sortDirection"
+                               wire:click="sort('category_id')">Category
+            </flux:table.column>
             <flux:table.column>Actions</flux:table.column>
         </flux:table.columns>
 
@@ -133,11 +152,20 @@ new class extends Component {
             @forelse ($events as $event)
                 <flux:table.row :key="$event->id">
                     <flux:table.cell>{{ $event->organizer->name ?? 'Unknown' }}</flux:table.cell>
-                    <flux:table.cell>{{ $event->event_title ?? 'Unknown'}}</flux:table.cell>
-                    <flux:table.cell>{{ $event->event_date->format('d M Y, g:i A') }}</flux:table.cell>
-                    <flux:table.cell>{{ $event->event_time->format('d M Y, g:i A') }}</flux:table.cell>
-                    <flux:table.cell>{{ $event->event_type }}</flux:table.cell>
-                    <flux:table.cell>{{ $event->event_status ?? 'Unknown' }}</flux:table.cell>
+
+                    <flux:table.cell>{{ $event->title->title ?? 'Unknown'}}</flux:table.cell>
+
+                    <flux:table.cell>{{ $event->event_date->format('d M Y') }}</flux:table.cell>
+                    <flux:table.cell>{{ $event->event_time->format('g:i A') }}</flux:table.cell>
+                    <flux:table.cell>
+                        @foreach($event->categories as $category)
+                            <flux:badge size="sm"
+                                        color="{{ $categoryColors[$category->name] ?? 'Unknown' }}">
+                                {{ $category->name ?? 'Unknown' }}
+                            </flux:badge>
+                        @endforeach
+                    </flux:table.cell>
+
                     <flux:table.cell>
                         <flux:dropdown position="bottom" align="end" offset="-15">
                             <flux:button variant="ghost" size="sm" icon="ellipsis-horizontal"

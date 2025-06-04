@@ -15,6 +15,7 @@ class ReportFactory extends Factory
     public function definition(): array
     {
         $models = $this->faker->randomElement(['App\Models\Post', 'App\Models\Event', 'App\Models\Story', 'App\Models\Article']);
+
         return [
             'user_id' => User::inRandomOrder()->value('id'),
             'reportable_id' => $models::inRandomOrder()->value('id'),

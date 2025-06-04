@@ -5,4 +5,5 @@ return [
     App\Providers\HorizonServiceProvider::class,
     App\Providers\ViewComposerServiceProvider::class,
     App\Providers\VoltServiceProvider::class,
+    App\Providers\ScheduleServiceProvider::class,
 ];

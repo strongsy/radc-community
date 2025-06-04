@@ -14,6 +14,7 @@ class LikeFactory extends Factory
     public function definition(): array
     {
         $models = $this->faker->randomElement(['App\Models\Post', 'App\Models\Event', 'App\Models\Story', 'App\Models\Article']);
+
         return [
             'user_id' => User::inrandomOrder()->value('id'),
             'likeable_id' => $models::factory(),
