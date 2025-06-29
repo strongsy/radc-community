@@ -339,14 +339,9 @@ new class extends Component {
                     @endif
                 </flux:button>
             </flux:button.group>
-
-
             <flux:badge size="sm" color="red" variant="solid">{{ $events->total() }} events</flux:badge>
-
-
         </div>
     </div>
-
 
     <!-- Events Grid -->
     <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-2 xl:grid-cols-3 gap-6 mb-8">
@@ -414,9 +409,10 @@ new class extends Component {
                     <!-- Description -->
                     @if($event->description)
                         <flux:text size="sm" class="mb-3 line-clamp-3">
-                            {{ $event->description }}
+                            {!! Str::limit(strip_tags($event->description), 150) !!}
                         </flux:text>
                     @endif
+
 
                     <!-- Event Details -->
                     <div class="space-y-2">

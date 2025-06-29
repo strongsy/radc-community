@@ -25,6 +25,7 @@ return new class extends Migration
             $table->date('start_date');
             $table->time('start_time');
             $table->time('end_time');
+            $table->integer('capacity')->nullable();
             $table->boolean('allow_guests')->default(false);
             $table->timestamps();
             $table->index(['id', 'event_id']);
