@@ -1,11 +1,11 @@
 <?php
 
-use App\Mail\AdminNewUserRegistrationMail;
-use App\Mail\UserRegistrationConfirmationMail;
 use App\Models\Community;
 use App\Models\Entitlement;
 use App\Models\Membership;
 use App\Models\User;
+use App\Notifications\NewUserRegistrationForAdminNotification;
+use App\Notifications\UserRegistrationReceivedNotification;
 use Illuminate\Support\Facades\Notification;
 use Illuminate\Auth\Events\Registered;
 use Illuminate\Routing\Redirector;
@@ -77,9 +77,11 @@ new #[Layout('components.layouts.auth')] class extends Component {
         activity()->log($user->name . ' REGISTERED');
 
         //send the emails
-        Mail::to(config('mail . admin_email'))->queue(new AdminNewUserRegistrationMail($user));
+        $user->notify(new UserRegistrationReceivedNotification($user));
 
-        Mail::to($user->email)->queue(new UserRegistrationConfirmationMail($user));
+        Notification::route('mail', config('mail.sec_email'))
+            ->notify(new NewUserRegistrationForAdminNotification($user));
+
 
         //reset the form
         $this->reset();
@@ -184,7 +186,7 @@ new #[Layout('components.layouts.auth')] class extends Component {
                 <flux:select.option value="{{ $id }}" wire:key="{{ $id }}">
                     {{ $name }}
                 </flux:select.option>
-            @endforeach;
+            @endforeach
         </flux:select>
 
         <!-- Affiliation -->

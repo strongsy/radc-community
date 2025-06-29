@@ -13,7 +13,9 @@ class DrinkPreferenceFactory extends Factory
     public function definition(): array
     {
         return [
-            'drink_type' => $this->faker->word(),
+            'name' => $this->faker->name(),
+            'description' => $this->faker->text(),
+            'colour' => $this->faker->word(),
             'created_at' => Carbon::now(),
             'updated_at' => Carbon::now(),
         ];

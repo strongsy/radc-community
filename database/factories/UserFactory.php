@@ -9,56 +9,59 @@ use Illuminate\Database\Eloquent\Factories\Factory;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Str;
 
-/**
- * @extends Factory<User>
- */
 class UserFactory extends Factory
 {
-    /**
-     * The current password being used by the factory.
-     */
-    protected static ?string $password;
+    protected $model = User::class;
 
-    /**
-     * Define the model's default state.
-     *
-     * @return array<string, mixed>
-     */
     public function definition(): array
     {
-
-        // Get existing community and membership IDs
-        $communityIds = Community::pluck('id')->toArray();
-        $membershipIds = Membership::pluck('id')->toArray();
-
-        // Default IDs if tables are empty
-        $defaultCommunityId = 1;
-        $defaultMembershipId = 1;
-
         return [
-            'name' => fake()->name(),
-            'email' => fake()->unique()->safeEmail(),
-            'email_verified_at' => null,
-            'password' => static::$password ??= Hash::make('password'),
-            'community_id' => ! empty($communityIds) ? fake()->randomElement($communityIds) : $defaultCommunityId,
-            'membership_id' => ! empty($membershipIds) ? fake()->randomElement($membershipIds) : $defaultMembershipId,
-
-            'affiliation' => fake()->paragraphs(2, true),
-            'is_subscribed' => fake()->randomelement([true, false]),
-            'is_active' => fake()->randomelement([true, false]),
-            'is_blocked' => fake()->randomelement([true, false]),
+            'name' => $this->faker->name(),
+            'email' => $this->faker->unique()->safeEmail(),
+            'email_verified_at' => $this->faker->optional(0.8)->dateTime(),
+            'password' => Hash::make('password'),
+            'community_id' => Community::factory(),
+            'membership_id' => Membership::factory(),
+            'affiliation' => $this->faker->randomElement([
+                'Army Veteran',
+                'Navy Veteran',
+                'Air Force Veteran',
+                'Marines Veteran',
+                'Coast Guard Veteran',
+                'Spouse',
+                'Family Member',
+                'Supporter'
+            ]),
+            'is_approved' => $this->faker->boolean(70),
+            'approved_at' => $this->faker->optional(0.7)->dateTime(),
+            'approved_by' => null,
+            'is_subscribed' => $this->faker->boolean(80),
+            'is_blocked' => $this->faker->boolean(5),
             'unsubscribe_token' => Str::random(32),
-
+            'remember_token' => Str::random(10),
         ];
     }
 
-    /**
-     * Indicate that the model's email address should be unverified.
-     */
     public function unverified(): static
     {
         return $this->state(fn (array $attributes) => [
             'email_verified_at' => null,
+        ]);
+    }
+
+    public function approved(): static
+    {
+        return $this->state(fn (array $attributes) => [
+            'is_approved' => true,
+            'approved_at' => $this->faker->dateTime(),
+            'approved_by' => User::factory(),
+        ]);
+    }
+
+    public function blocked(): static
+    {
+        return $this->state(fn (array $attributes) => [
+            'is_blocked' => true,
         ]);
     }
 }

@@ -15,8 +15,8 @@ Details are shown below.
 
 You can reply to this message by clicking the button.
 
-@component('mail::button', ['url' => ''])
-Button Text
+@component('mail::button', ['url' => route('emails.email')])
+Emails
 @endcomponent
 
 Thanks,<br>

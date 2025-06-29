@@ -2,74 +2,28 @@
 
 namespace Database\Seeders;
 
-use App\Models\ArticleCategory;
-use App\Models\EventCategory;
-use App\Models\NewsCategory;
-use App\Models\StoryCategory;
+use App\Models\Category;
 use Illuminate\Database\Seeder;
 
 class CategorySeeder extends Seeder
 {
     public function run(): void
     {
-       EventCategory::insert([
-           ['name' => 'Social'],
-           ['name' => 'Food'],
-           ['name' => 'Drink'],
-           ['name' => 'CPD'],
-           ['name' => 'Cenotaph'],
-           ['name' => 'Ceremony'],
-           ['name' => 'Conference'],
-           ['name' => 'Lecture'],
-           ['name' => 'Meeting'],
-           ['name' => 'Professional'],
-           ['name' => 'Turning of the Page'],
-           ['name' => 'Adventure Training'],
-           ['name' => 'Officers Mess'],
-           ['name' => 'RADC Officers Mess'],
-           ['name' => 'RADC WO & Sgt Mess'],
-           ['name' => 'Other'],
-       ]);
+        $categories = [
+            ['name' => 'Social Events', 'description' => 'Social gatherings and community events', 'colour' => 'blue'],
+            ['name' => 'Memorial Services', 'description' => 'Memorial and remembrance services', 'colour' => 'zinc'],
+            ['name' => 'Fundraising', 'description' => 'Fundraising events and activities', 'colour' => 'green'],
+            ['name' => 'Education', 'description' => 'Educational workshops and seminars', 'colour' => 'purple'],
+            ['name' => 'Sports & Recreation', 'description' => 'Sports and recreational activities', 'colour' => 'orange'],
+            ['name' => 'Community Service', 'description' => 'Community service and volunteer work', 'colour' => 'emerald'],
+            ['name' => 'Family Events', 'description' => 'Family-friendly events and activities', 'colour' => 'pink'],
+            ['name' => 'Ceremonies', 'description' => 'Official ceremonies and celebrations', 'colour' => 'red'],
+            ['name' => 'Meetings', 'description' => 'Regular meetings and assemblies', 'colour' => 'amber'],
+            ['name' => 'Workshops', 'description' => 'Training workshops and skill development', 'colour' => 'cyan'],
+        ];
 
-       NewsCategory::insert([
-           ['name' => 'General'],
-           ['name' => 'Community Update'],
-           ['name' => 'Events Coverage'],
-           ['name' => 'Members News'],
-           ['name' => 'Announcements'],
-           ['name' => 'Press Release'],
-           ['name' => 'Breaking'],
-           ['name' => 'Death'],
-           ['name' => 'Marriage'],
-           ['name' => 'Birth'],
-           ['name' => 'Other'],
-       ]);
-
-       StoryCategory::insert([
-           ['name' => 'Reserves'],
-           ['name' => 'Veterans'],
-           ['name' => 'Civilians'],
-           ['name' => 'Serving'],
-           ['name' => 'Inspirational'],
-           ['name' => 'Testimonial'],
-           ['name' => 'Personal'],
-           ['name' => 'Service'],
-           ['name' => 'National Service'],
-           ['name' => 'Other'],
-       ]);
-
-       ArticleCategory::insert([
-           ['name' => 'General'],
-           ['name' => 'News'],
-           ['name' => 'Research'],
-           ['name' => 'Opinion'],
-           ['name' => 'Study'],
-           ['name' => 'RADC'],
-           ['name' => 'Dental Hygiene'],
-           ['name' => 'Dental Technician'],
-           ['name' => 'Dentist'],
-           ['name' => 'Dental Clerk Assistant'],
-           ['name' => 'Other'],
-       ]);
+        foreach ($categories as $category) {
+            Category::create($category);
+        }
     }
 }

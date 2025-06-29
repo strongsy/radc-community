@@ -4,7 +4,6 @@ namespace Database\Factories;
 
 use App\Models\Venue;
 use Illuminate\Database\Eloquent\Factories\Factory;
-use Illuminate\Support\Carbon;
 
 class VenueFactory extends Factory
 {
@@ -12,7 +11,6 @@ class VenueFactory extends Factory
 
     public function definition(): array
     {
-
         $ukCounties = [
             'Bedfordshire',
             'Berkshire',
@@ -49,13 +47,22 @@ class VenueFactory extends Factory
         ];
 
         return [
-            'venue' => $this->faker->company(),
+            'name' => $this->faker->randomElement([
+                    'Veterans Hall',
+                    'Community Center',
+                    'Memorial Park',
+                    'Legion Hall',
+                    'VFW Post',
+                    'Town Hall',
+                    'Conference Center',
+                    'Hotel Ballroom',
+                    'Church Hall',
+                    'School Auditorium'
+                ]) . ' - ' . $this->faker->city(),
             'address' => $this->faker->streetAddress(),
             'city' => $this->faker->city(),
             'county' => $this->faker->randomElement($ukCounties),
             'post_code' => $this->faker->postcode(),
-            'created_at' => Carbon::now(),
-            'updated_at' => Carbon::now(),
         ];
     }
 }

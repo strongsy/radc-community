@@ -3,67 +3,30 @@
 namespace Database\Factories;
 
 use App\Models\Event;
-use App\Models\EventTitle;
-use App\Models\Status;
+use App\Models\Title;
 use App\Models\User;
 use App\Models\Venue;
 use Illuminate\Database\Eloquent\Factories\Factory;
-use Illuminate\Support\Carbon;
-use Random\RandomException;
 
 class EventFactory extends Factory
 {
     protected $model = Event::class;
 
-    /**
-     * @throws RandomException
-     */
     public function definition(): array
     {
-        // Create a random date within this year
-        $startingDate = now()->startOfYear()->addDays(random_int(0, 365));
-
-        $randomTime = '19:30:00';
-
-        $eventTitles = EventTitle::pluck('id')->toArray();
-
-
-        // Calculate other dates relative to the starting date
-        $closesAt = $startingDate->copy()->addMonths(2);
-        $expiresAt = $startingDate->copy()->addYear();
+        $startDate = $this->faker->dateTimeBetween('now', '+6 months');
+        $endDate = $this->faker->dateTimeBetween($startDate, $startDate->format('Y-m-d') . ' +7 days');
+        $rsvpCloses = $this->faker->dateTimeBetween('now', $startDate);
 
         return [
-            'user_id' => User::inRandomOrder()->value('id'),
-            /*'event_category_id' => EventCategory::inRandomOrder()->value('id'),*/
-            'title_id' => fake()->randomElement($eventTitles),
-            'event_content' => collect([
-                '# ' . $this->faker->sentence(),
-                '## ' . $this->faker->sentence(),
-                $this->faker->paragraph(),
-                '- ' . $this->faker->sentence(),
-                '- ' . $this->faker->sentence(),
-                '> ' . $this->faker->sentence(),
-                '**' . $this->faker->words(3, true) . '**',
-                '*' . $this->faker->words(2, true) . '*',
-                $this->faker->paragraph(),
-                '```',
-                $this->faker->text(),
-                '```'
-            ])->join("\n\n"),
-            'event_date' => $startingDate,
-            'event_time' => $randomTime,
-            'venue_id' => Venue::inRandomOrder()->value('id'),
-            'status_id' => Status::inRandomOrder()->value('id'),
-            'allow_guests' => $this->faker->boolean(20),
-            'max_guests' => $this->faker->randomNumber(1),
-            'max_attendees' => $this->faker->randomNumber(2),
-            'user_cost' => $this->faker->randomFloat(2, 0, 999.99),  // 2 decimal places, max 999.99
-            'guest_cost' => $this->faker->randomFloat(2, 0, 999.99), // 2 decimal places, max 999.99
-            'cover_img' => $this->faker->imageUrl,
-            'closes_at' => $closesAt,
-            'expires_at' => $expiresAt,
-            'created_at' => Carbon::now(),
-            'updated_at' => Carbon::now(),
+            'user_id' => User::factory(),
+            'title_id' => Title::factory(),
+            'venue_id' => Venue::factory(),
+            'description' => $this->faker->paragraphs(3, true),
+            'max_serials' => $this->faker->numberBetween(1, 40),
+            'start_date' => $startDate->format('Y-m-d'),
+            'end_date' => $endDate->format('Y-m-d'),
+            'rsvp_closes_at' => $rsvpCloses->format('Y-m-d'),
         ];
     }
 }

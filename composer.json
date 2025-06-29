@@ -18,11 +18,14 @@
         "livewire/flux": "^2.1.1",
         "livewire/flux-pro": "^2.1",
         "livewire/volt": "^1.7.0",
-        "maatwebsite/excel": "^3.1",
+        "phpoffice/phpspreadsheet": "^4.4",
         "power-components/livewire-powergrid": "^6.3",
         "spatie/laravel-activitylog": "^4.10",
         "spatie/laravel-honeypot": "^4.6",
-        "spatie/laravel-permission": "^6.17"
+        "spatie/laravel-medialibrary": "^11.13",
+        "spatie/laravel-medialibrary-pro": "^6.0.0",
+        "spatie/laravel-permission": "^6.17",
+        "ylsideas/subscribable-notifications": "^1.7"
     },
     "require-dev": {
         "fakerphp/faker": "^1.23",
@@ -96,6 +99,10 @@
         "flux-pro": {
             "type": "composer",
             "url": "https://composer.fluxui.dev"
+        },
+        "satis.spatie.be": {
+            "type": "composer",
+            "url": "https://satis.spatie.be"
         }
     }
 }

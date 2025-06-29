@@ -6,42 +6,60 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Relations\MorphMany;
-use Illuminate\Database\Eloquent\Relations\MorphToMany;
-use Illuminate\Database\Eloquent\SoftDeletes;
+use Spatie\MediaLibrary\HasMedia;
+use Spatie\MediaLibrary\InteractsWithMedia;
 
-class Event extends Model
+class Event extends Model implements HasMedia
 {
-    use HasFactory, SoftDeletes;
+    use HasFactory, InteractsWithMedia;
 
     protected $fillable = [
         'user_id',
         'title_id',
-        'event_content',
-        'event_date',
-        'event_time',
         'venue_id',
-        'category_id',
-        'event_status',
-        'allow_guests',
-        'max_guests',
-        'max_attendees',
-        'user_cost',
-        'guest_cost',
-        'cover_img',
-        'closes_at',
-        'expires_at',
+        'description',
+        'max_serials',
+        'start_date',
+        'end_date',
+        'rsvp_closes_at',
     ];
 
-    protected function casts(): array
+    protected $casts = [
+        'start_date' => 'date',
+        'end_date' => 'date',
+        'rsvp_closes_at' => 'date',
+    ];
+
+    public function user(): BelongsTo
     {
-        return [
-            'event_date' => 'date',
-            'event_time' => 'datetime:H:i:s',
-            'allow_guests' => 'boolean',
-            'closes_at' => 'datetime',
-            'expires_at' => 'datetime',
-        ];
+        return $this->belongsTo(User::class);
+    }
+
+    public function title(): BelongsTo
+    {
+        return $this->belongsTo(Title::class);
+    }
+
+    public function venue(): BelongsTo
+    {
+        return $this->belongsTo(Venue::class);
+    }
+
+    public function categories(): BelongsToMany
+    {
+        return $this->belongsToMany(Category::class, 'category_events');
+    }
+
+    public function eventSessions(): HasMany
+    {
+        return $this->hasMany(EventSession::class);
+    }
+
+    public function gallery(): MorphMany
+    {
+        return $this->morphMany(Gallery::class, 'galleryable');
     }
 
     public function comments(): MorphMany
@@ -49,52 +67,13 @@ class Event extends Model
         return $this->morphMany(Comment::class, 'commentable');
     }
 
-    public function title(): BelongsTo
+    public function likes(): MorphMany
     {
-        return $this->belongsTo(EventTitle::class);
+        return $this->morphMany(Like::class, 'likeable');
     }
 
-    public function organizer(): BelongsTo
+    public function dislikes(): MorphMany
     {
-        return $this->belongsTo(User::class, 'user_id');
-    }
-
-    public function categories(): belongsToMany
-    {
-        return $this->belongsToMany(EventCategory::class, 'category_event', 'event_id', 'event_category_id');
-    }
-
-    public function venue(): belongsTo
-    {
-        return $this->belongsTo(Venue::class);
-    }
-
-    public function user(): belongsTo
-    {
-        return $this->belongsTo(User::class);
-    }
-
-    public function attendees(): BelongsToMany
-    {
-        return $this->belongsToMany(User::class, 'event_user')
-            ->withTimestamps();
-    }
-
-    public function guests(): BelongsToMany
-    {
-        return $this->belongsToMany(User::class, 'event_guest')
-            ->withTimestamps();
-    }
-
-
-    /**
-     * Scope a query to clean expired entries by setting the 'deleted_at' timestamp.
-     */
-    public function scopeCleanExpired($query): void
-    {
-        $query->where('expires_at', '<=', now())
-            ->whereNull('deleted_at')
-            ->update(['deleted_at' => now()]);
-
+        return $this->morphMany(Dislike::class, 'dislikeable');
     }
 }

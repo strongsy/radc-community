@@ -3,24 +3,20 @@
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Factories\HasFactory;
+use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\HasMany;
-use Illuminate\Database\Eloquent\Relations\Pivot;
 
-/**
- * @method static updateOrCreate(array $array, array $community)
- * @method static pluck(string $string)
- */
-class Community extends Pivot
+class Community extends Model
 {
     use HasFactory;
 
     protected $fillable = [
         'name',
         'description',
-        'user_id',
+        'colour',
     ];
 
-    public function user(): HasMany
+    public function users(): HasMany
     {
         return $this->hasMany(User::class);
     }

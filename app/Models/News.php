@@ -7,7 +7,6 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\Relations\MorphMany;
-use Illuminate\Database\Eloquent\Relations\MorphToMany;
 
 class News extends Model
 {
@@ -15,31 +14,37 @@ class News extends Model
 
     protected $fillable = [
         'user_id',
-        'news_title',
-        'news_content',
-        'news_cat',
-        'news_status',
-        'release_at',
-        'expires_at',
-        'cover_img',
+        'name',
+        'description',
     ];
 
-    protected function casts(): array
+    public function user(): BelongsTo
     {
-        return [
-            'release_at' => 'datetime',
-            'expires_at' => 'datetime',
-        ];
+        return $this->belongsTo(User::class);
     }
 
     public function categories(): BelongsToMany
     {
-        return $this->belongsToMany(NewsCategory::class, 'category_news', 'news_id', 'news_category_id');
+        return $this->belongsToMany(Category::class, 'category_news');
     }
 
+    public function gallery(): MorphMany
+    {
+        return $this->morphMany(Gallery::class, 'galleryable');
+    }
 
     public function comments(): MorphMany
     {
         return $this->morphMany(Comment::class, 'commentable');
+    }
+
+    public function likes(): MorphMany
+    {
+        return $this->morphMany(Like::class, 'likeable');
+    }
+
+    public function dislikes(): MorphMany
+    {
+        return $this->morphMany(Dislike::class, 'dislikeable');
     }
 }

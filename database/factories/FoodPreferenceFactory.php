@@ -4,7 +4,6 @@ namespace Database\Factories;
 
 use App\Models\FoodPreference;
 use Illuminate\Database\Eloquent\Factories\Factory;
-use Illuminate\Support\Carbon;
 
 class FoodPreferenceFactory extends Factory
 {
@@ -13,9 +12,23 @@ class FoodPreferenceFactory extends Factory
     public function definition(): array
     {
         return [
-            'food_type' => $this->faker->word(),
-            'created_at' => Carbon::now(),
-            'updated_at' => Carbon::now(),
+            'name' => $this->faker->randomElement([
+                'Vegetarian',
+                'Vegan',
+                'Halal',
+                'Kosher',
+                'Gluten-Free',
+                'Keto',
+                'Paleo',
+                'Low-Sodium',
+                'Diabetic-Friendly',
+                'No Preference'
+            ]),
+            'description' => $this->faker->sentence(),
+            'colour' => $this->faker->randomElement([
+                'zinc', 'red', 'orange', 'amber', 'yellow', 'lime', 'green',
+                'emerald', 'teal', 'cyan', 'sky', 'blue', 'indigo', 'violet', 'purple', 'fuchsia', 'pink', 'rose'
+            ]),
         ];
     }
 }

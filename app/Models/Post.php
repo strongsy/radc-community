@@ -14,14 +14,23 @@ class Post extends Model
 
     protected $fillable = [
         'user_id',
-        'post_title',
-        'post_content',
-        'post_status',
+        'name',
+        'description',
     ];
 
     public function user(): BelongsTo
     {
         return $this->belongsTo(User::class);
+    }
+
+    public function categories(): BelongsToMany
+    {
+        return $this->belongsToMany(Category::class, 'category_posts');
+    }
+
+    public function gallery(): MorphMany
+    {
+        return $this->morphMany(Gallery::class, 'galleryable');
     }
 
     public function comments(): MorphMany
@@ -37,20 +46,5 @@ class Post extends Model
     public function dislikes(): MorphMany
     {
         return $this->morphMany(Dislike::class, 'dislikeable');
-    }
-
-    public function reports(): MorphMany
-    {
-        return $this->morphMany(Report::class, 'reportable');
-    }
-
-    public function ratings(): MorphMany
-    {
-        return $this->morphMany(Rating::class, 'ratable');
-    }
-
-    public function categories(): BelongsToMany
-    {
-        return $this->belongsToMany(Category::class);
     }
 }

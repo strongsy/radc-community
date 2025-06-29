@@ -61,37 +61,48 @@ Route::middleware(['auth'])->group(function () {
     Volt::route('settings/password', 'settings.password')->name('settings.password');
     Volt::route('settings/appearance', 'settings.appearance')->name('settings.appearance');
 
+    // Spatie activity route
+    Volt::route('activity/index', 'activity.index.page')->name('activity.index')->middleware('can:activity-log-read');
+
+    // Article routes
+    Volt::route('articles/index', 'articles.index.page')->name('articles.index')->middleware('can:article-read');
+
+    // Email routes
+    Volt::route('email/index', 'email.index.page')->name('email.index')->middleware('can:email-read');
+    Volt::route('email/archive', 'email.archive.page')->name('email.archive')->middleware('can:email-read');
+
+    // Event routes
+    Volt::route('events/index', 'events.index.page')->name('events.index')->middleware('can:event-read');
+    Volt::route('events/create', 'events.create.page')->name('events.create')->middleware('can:event-create');
+    Volt::route('events/update/{id}', 'events.update.page')->name('events.update')->middleware('can:event-update');
+    Volt::route('events/show/{id}', 'events.show.page')->name('events.show')->middleware('can:event-read');
+
+    // Gallery routes
+    Volt::route('gallery/index', 'gallery.index.page')->name('gallery.index')->middleware('can:gallery-read');
+
+    // News routes
+    Volt::route('news/index', 'news.index.page')->name('news.index')->middleware('can:news-read');
+
+    // Post routes
+    Volt::route('posts/index', 'posts.index.page')->name('posts.index')->middleware('can:post-read');
+
+    // Story routes
+    Volt::route('stories/index', 'stories.index.page')->name('stories.index')->middleware('can:story-read');
+
+
+    // Story routes
+    Volt::route('stories/index', 'stories.index.page')->name('stories.index')->middleware('can:story-read');
+
+
+
     // user views
-    Volt::route('users/active', 'backend.users.active.page')->name('users.active')->middleware('can:user-read');
-    Volt::route('users/blocked', 'backend.users.blocked.page')->name('users.blocked')->middleware('can:user-read');
-    Volt::route('users/registrations', 'backend.users.registrations.page')->name('users.registrations')->middleware('can:user-read');
+    Volt::route('users/active', 'users.active.page')->name('users.active')->middleware('can:user-read');
+    Volt::route('users/blocked', 'users.blocked.page')->name('users.blocked')->middleware('can:user-read');
+    Volt::route('users/pending', 'users.pending.page')->name('users.pending')->middleware('can:user-read');
 
-    // activity log views
-    Volt::route('activity-log', 'backend.activity.index.page')->name('activity-log')->middleware('can:activity-log-read');
 
-    // mail views
-    Volt::route('mail-list', 'backend.email.index.page')->name('mail-list')->middleware('can:mail-read');
-    Volt::route('mail-archived', 'backend.email.archived.page')->name('mail-archived')->middleware('can:mail-restore');
-
-    // event views
-    Volt::route('event-list', 'backend.events.index.page')->name('event-list')->middleware('can:event-read');
-    Volt::route('event-create', 'backend.events.create.page')->name('event-create')->middleware('can:event-create');
-    Volt::route('venue-list', 'backend.venues.index.page')->name('venue-list')->middleware('can:event-read');
-
-    // article views
-    Volt::route('article-list', 'backend.articles.index.page')->name('article-list')->middleware('can:article-read');
-
-    // stories views
-    Volt::route('story-list', 'backend.stories.index.page')->name('story-list')->middleware('can:story-read');
-
-    // posts views
-    Volt::route('post-list', 'backend.posts.index.page')->name('post-list')->middleware('can:post-read');
-
-    // galleries views
-    Volt::route('gallery-list', 'backend.galleries.index.page')->name('gallery-list')->middleware('can:gallery-read');
-
-    // news views
-    Volt::route('news-list', 'backend.news.index.page')->name('news-list')->middleware('can:news-read');
+    // Venue routes
+    Volt::route('venues/index', 'venues.index.page')->name('venues.index')->middleware('can:venue-read');
 });
 
 require __DIR__.'/auth.php';

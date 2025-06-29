@@ -4,19 +4,26 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
-use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\MorphTo;
 
 class Gallery extends Model
 {
     use HasFactory;
 
     protected $fillable = [
-        'gallery_cat',
-        'gallery_desc',
+        'user_id',
+        'galleryable_id',
+        'galleryable_type',
     ];
 
-    public function albums(): HasMany
+    public function user(): BelongsTo
     {
-        return $this->hasMany(Album::class);
+        return $this->belongsTo(User::class);
+    }
+
+    public function galleryable(): MorphTo
+    {
+        return $this->morphTo();
     }
 }

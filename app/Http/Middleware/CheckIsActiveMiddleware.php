@@ -11,7 +11,7 @@ class CheckIsActiveMiddleware
 {
     public function handle(Request $request, Closure $next): Response
     {
-        if (Auth::check() && ! Auth::user()->is_active) {
+        if (Auth::check() && ! Auth::user()->is_approved) {
             Auth::logout();
 
             $request->session()->invalidate();

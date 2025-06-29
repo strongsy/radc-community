@@ -13,20 +13,38 @@ class Story extends Model
     use HasFactory;
 
     protected $fillable = [
-        'story_title',
-        'story_content',
-        'story_status',
-        'story_category_id',
-        'cover_img',
+        'user_id',
+        'name',
+        'description',
     ];
+
+    public function user(): BelongsTo
+    {
+        return $this->belongsTo(User::class);
+    }
 
     public function categories(): BelongsToMany
     {
-        return $this->belongsToMany(StoryCategory::class, 'category_stories', 'story_id', 'story_category_id');
+        return $this->belongsToMany(Category::class, 'category_stories');
+    }
+
+    public function gallery(): MorphMany
+    {
+        return $this->morphMany(Gallery::class, 'galleryable');
     }
 
     public function comments(): MorphMany
     {
         return $this->morphMany(Comment::class, 'commentable');
+    }
+
+    public function likes(): MorphMany
+    {
+        return $this->morphMany(Like::class, 'likeable');
+    }
+
+    public function dislikes(): MorphMany
+    {
+        return $this->morphMany(Dislike::class, 'dislikeable');
     }
 }

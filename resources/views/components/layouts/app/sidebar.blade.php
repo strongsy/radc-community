@@ -34,6 +34,8 @@ $stories = Story::count();*/
 <html lang="{{ str_replace('_', '-', app()->getLocale()) }}" class="dark">
 <head>
     <title>{{ config('app.name') }}</title>
+    @fluxAppearance
+    @mediaLibraryStyles
     @include('partials.head')
 </head>
 <body class="min-h-screen bg-white dark:bg-zinc-800">
@@ -53,70 +55,62 @@ $stories = Story::count();*/
 
             <!-- activity log -->
             @can('activity-log-read')
-                <flux:navlist.item icon="briefcase" :href="route('activity-log')"
-                                   :current="request()->routeIs('activity-log')"
+                <flux:navlist.item icon="briefcase" :href="route('activity.index')"
+                                   :current="request()->routeIs('activity.index')"
                                    wire:navigate>{{ __('Activity Log') }}</flux:navlist.item>
             @endcan
 
             <!-- articles -->
             @can('article-read')
-                <flux:navlist.item icon="information-circle" :href="route('article-list')"
-                                   :current="request()->routeIs('article-list')"
+                <flux:navlist.item icon="information-circle" :href="route('articles.index')"
+                                   :current="request()->routeIs('articles.index')"
                                    wire:navigate>{{ __('Articles') }}</flux:navlist.item>
             @endcan
 
             <!-- email -->
             @can('mail-read')
                 <flux:navlist.group heading="Email" expandable>
-                    <flux:navlist.item icon="envelope-open" href="{{route('mail-list')}}"
-                                       :current="request()->routeIs('mail-list')" wire:navigate>
+                    <flux:navlist.item icon="envelope-open" href="{{route('email.index')}}"
+                                       :current="request()->routeIs('email.index')" wire:navigate>
                         {{ __('Received') }} </flux:navlist.item>
-                    <flux:navlist.item icon="archive-box" href="{{ route('mail-archived') }}"
-                                       :current="request()->routeIs('mail-archived')"
+                    <flux:navlist.item icon="archive-box" href="{{ route('email.archive') }}"
+                                       :current="request()->routeIs('email.archive')"
                                        wire:navigate>{{ __('Archived') }}</flux:navlist.item>
                 </flux:navlist.group>
             @endcan
 
             <!-- events -->
             @can('event-read')
-                <flux:navlist.group heading="Events" expandable>
-                    <flux:navlist.item icon="calendar" href="{{ route('event-list') }}"
-                                       :current="request()->routeIs('event-list')"
-                                       wire:navigate>{{ __('List Events') }}</flux:navlist.item>
-                    <flux:navlist.item icon="plus-circle" href="{{ route('event-create') }}"
-                                       :current="request()->routeIs('event-create')"
-                                       wire:navigate>{{ __('Create Event') }}</flux:navlist.item>
-                    <flux:navlist.item icon="map-pin" href="{{ route('venue-list') }}"
-                                       :current="request()->routeIs('venue-list')"
-                                       wire:navigate>{{ __('Venues') }}</flux:navlist.item>
-                </flux:navlist.group>
+                <flux:navlist.item icon="calendar-days" :href="route('events.index')"
+                                   :current="request()->routeIs('events.index')"
+                                   wire:navigate>{{ __('Events') }}</flux:navlist.item>
             @endcan
 
             <!-- galleries -->
             @can('gallery-read')
-                <flux:navlist.item icon="photo" href="{{ route('gallery-list') }}"
-                                   :current="request()->routeIs('gallery-list')"
+                <flux:navlist.item icon="photo" href="{{ route('gallery.index') }}"
+                                   :current="request()->routeIs('gallery.index')"
                                    wire:navigate>{{ __('Galleries') }}</flux:navlist.item>
             @endcan
 
             <!-- news -->
             @can('news-read')
-                <flux:navlist.item icon="newspaper" href="{{ route('news-list') }}"
-                                   :current="request()->routeIs('news-list')"
+                <flux:navlist.item icon="newspaper" href="{{ route('news.index') }}"
+                                   :current="request()->routeIs('news.index')"
                                    wire:navigate>{{ __('News') }}</flux:navlist.item>
             @endcan
 
             <!-- posts -->
             @can('post-read')
-                <flux:navlist.item icon="speaker-wave" :href="route('post-list')"
-                                   :current="request()->routeIs('post-list')"
+                <flux:navlist.item icon="speaker-wave" :href="route('posts.index')"
+                                   :current="request()->routeIs('posts.index')"
                                    wire:navigate>{{ __('Posts') }}</flux:navlist.item>
             @endcan
 
             <!-- stories -->
             @can('story-read')
-                <flux:navlist.item icon="book-open" :href="route('story-list')"
-                                   :current="request()->routeIs('story-list')"
+                <flux:navlist.item icon="book-open" :href="route('stories.index')"
+                                   :current="request()->routeIs('stories.index')"
                                    wire:navigate>{{ __('Stories') }}</flux:navlist.item>
             @endcan
 
@@ -126,9 +120,9 @@ $stories = Story::count();*/
                     <flux:navlist.item icon="users" href="{{route('users.active')}}"
                                        :current="request()->routeIs('users.active')" wire:navigate>
                         {{ __('Active') }} </flux:navlist.item>
-                    <flux:navlist.item icon="user-plus" href="{{ route('users.registrations') }}"
-                                       :current="request()->routeIs('users.registrations')"
-                                       wire:navigate>{{ __('Registrations') }}</flux:navlist.item>
+                    <flux:navlist.item icon="user-plus" href="{{ route('users.pending') }}"
+                                       :current="request()->routeIs('users.pending')"
+                                       wire:navigate>{{ __('Pending') }}</flux:navlist.item>
                     <flux:navlist.item icon="no-symbol" href="{{ route('users.blocked') }}"
                                        :current="request()->routeIs('users.blocked')"
                                        wire:navigate>{{ __('Blocked') }}</flux:navlist.item>
@@ -278,7 +272,7 @@ $stories = Story::count();*/
 {{ $slot }}
 
 @fluxScripts
-
+@mediaLibraryScripts
 @persist('toast')
 <flux:toast
     position='top-right'
