@@ -14,12 +14,13 @@ class EventSession extends Model
 
     protected $fillable = [
         'event_id',
-        'event_session_title_id',
-        'event_session_venue_id',
+        'name',
+        'location',
         'description',
         'start_date',
         'start_time',
         'end_time',
+        'capacity',
         'allow_guests',
     ];
 
@@ -35,7 +36,7 @@ class EventSession extends Model
         return $this->belongsTo(Event::class);
     }
 
-    public function eventSessionTitle(): BelongsTo
+    /*public function eventSessionTitle(): BelongsTo
     {
         return $this->belongsTo(EventSessionTitle::class);
     }
@@ -43,7 +44,7 @@ class EventSession extends Model
     public function eventSessionVenue(): BelongsTo
     {
         return $this->belongsTo(EventSessionVenue::class);
-    }
+    }*/
 
     public function users(): BelongsToMany
     {

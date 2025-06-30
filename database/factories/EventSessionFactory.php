@@ -19,12 +19,13 @@ class EventSessionFactory extends Factory
 
         return [
             'event_id' => Event::factory(),
-            'event_session_title_id' => EventSessionTitle::factory(),
-            'event_session_venue_id' => EventSessionVenue::factory(),
+            'name' => $this->faker->sentence(4),
+            'location' => $this->faker->company(),
             'description' => $this->faker->sentence(12),
             'start_date' => $this->faker->dateTimeBetween('now', '+6 months')->format('Y-m-d'),
             'start_time' => $startTime,
             'end_time' => $endTime,
+            'capacity' => $this->faker->numberBetween(10, 100),
             'allow_guests' => $this->faker->boolean(60),
         ];
     }

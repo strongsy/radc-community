@@ -21,8 +21,6 @@ class DatabaseSeeder extends Seeder
             CategorySeeder::class,
             TitleSeeder::class,
             VenueSeeder::class,
-            EventSessionTitleSeeder::class,
-            EventSessionVenueSeeder::class,
             FoodPreferenceSeeder::class,
             DrinkPreferenceSeeder::class,
             FoodAllergySeeder::class,
@@ -31,7 +29,6 @@ class DatabaseSeeder extends Seeder
             EventSessionSeeder::class,
             ContentSeeder::class,
             ContactEmailSeeder::class,
-
         ]);
     }
 }

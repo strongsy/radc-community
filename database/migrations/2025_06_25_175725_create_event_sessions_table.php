@@ -19,8 +19,8 @@ return new class extends Migration
         Schema::create('event_sessions', static function (Blueprint $table) {
             $table->id();
             $table->foreignIdFor(Event::class, 'event_id')->constrained();
-            $table->foreignIdFor(EventSessionTitle::class, 'event_session_title_id')->constrained();
-            $table->foreignIdFor(EventSessionVenue::class, 'event_session_venue_id')->constrained();
+            $table->string('name');
+            $table->string('location');
             $table->string('description');
             $table->date('start_date');
             $table->time('start_time');
