@@ -177,7 +177,7 @@ new class extends Component {
     }
 }; ?>
 
-<div class="flex mx-auto max-w-7xl flex-col">
+<div class="flex  flex-col translate-y-0 starting:translate-y-6 object-cover starting:opacity-0 opacity-100 transition-all duration-750">
     <!-- Header -->
     <flux:card class="md:flex md:items-center md:justify-between mb-8">
         <div class="flex-1 min-w-0">
@@ -189,7 +189,7 @@ new class extends Component {
             </flux:text>
         </div>
         <div class="mt-4 flex md:mt-0 md:ml-4">
-            <flux:button variant="danger" href="{{ route('events.create') }}">Create Event</flux:button>
+            <flux:button icon="plus" variant="danger" href="{{ route('events.create') }}">Create Event</flux:button>
         </div>
     </flux:card>
 
@@ -260,7 +260,7 @@ new class extends Component {
 
                 <!-- Categories -->
                 <div>
-                    <flux:select label="Categories" placeholder="Select categories..."
+                    <flux:select searchable label="Categories" placeholder="Select categories..."
                                  wire:model.lazy="selectedCategories">
                         <option value="">All Categories</option>
                         @foreach($categories as $category)
@@ -271,7 +271,7 @@ new class extends Component {
 
                 <!-- Venue -->
                 <div>
-                    <flux:select label="Venue" placeholder="Select venue..." wire:model.lazy="selectedVenue">
+                    <flux:select searchable label="Venue" placeholder="Select venue..." wire:model.lazy="selectedVenue">
                         <option value="">All Venues</option>
                         @foreach($venues as $venue)
                             <option value="{{ $venue->id }}">{{ $venue->name }}</option>
@@ -295,7 +295,7 @@ new class extends Component {
 
             <div class="mt-4 flex flex-wrap items-center gap-4">
                 <flux:checkbox label="Show my events only" wire:model.lazy="myEventsOnly"/>
-                <flux:button variant="primary" class="bg-blue-600" size="sm" wire:click="clearFilters">Clear All
+                <flux:button icon="x-mark" variant="primary" size="sm" wire:click="clearFilters">Clear All
                     Filters
                 </flux:button>
             </div>
@@ -309,6 +309,7 @@ new class extends Component {
 
             <flux:button.group>
                 <flux:button
+                    icon="calendar"
                     variant="filled"
                     size="sm"
                     wire:click="sortByDate"
@@ -319,6 +320,7 @@ new class extends Component {
                     @endif
                 </flux:button>
                 <flux:button
+                    icon="pencil-square"
                     variant="filled"
                     size="sm"
                     wire:click="sortByTitle"
@@ -329,6 +331,7 @@ new class extends Component {
                     @endif
                 </flux:button>
                 <flux:button
+                    icon="map-pin"
                     variant="filled"
                     size="sm"
                     wire:click="sortByVenue"
@@ -339,7 +342,7 @@ new class extends Component {
                     @endif
                 </flux:button>
             </flux:button.group>
-            <flux:badge size="sm" color="red" variant="solid">{{ $events->total() }} events</flux:badge>
+            <flux:badge size="sm" icon="document-magnifying-glass" color="red" variant="solid">{{ $events->total() }} events</flux:badge>
         </div>
     </div>
 
@@ -350,15 +353,12 @@ new class extends Component {
                 <!-- Event Image or Placeholder -->
                 <div class="h-48 bg-gradient-to-r from-teal-500 to-teal-800 relative">
                     @php
-                        $eventImages = collect($event->getMedia('event_files'))->filter(function ($media) {
-                            return str_starts_with($media->mime_type, 'image/');
-                        });
-                        $firstImage = $eventImages->first();
+                        $media = $event->getFirstMedia('event');
                     @endphp
 
-                    @if($firstImage)
+                    @if($media)
                         <img
-                            src="{{ $firstImage->getUrl('thumb') }}"
+                            src="{{ $media->getUrl('event') }}"
                             alt="{{ $event->title->name }}"
                             class="w-full h-full object-cover">
                     @else
@@ -370,15 +370,15 @@ new class extends Component {
                     <!-- Status Badge -->
                     <div class="absolute top-4 right-4">
                         @if($event->start_date->isFuture())
-                            <flux:badge size="sm" color="teal" variant="solid">
+                            <flux:badge icon="calendar-date-range" size="sm" color="teal" variant="solid">
                                 Upcoming
                             </flux:badge>
                         @elseif($event->start_date->isToday())
-                            <flux:badge size="sm" color="amber" variant="solid">
+                            <flux:badge icon="calendar" size="sm" color="amber" variant="solid">
                                 Today
                             </flux:badge>
                         @else
-                            <flux:badge size="sm" color="red" variant="solid">
+                            <flux:badge icon="lock-closed" size="sm" color="red" variant="solid">
                                 Past
                             </flux:badge>
                         @endif
@@ -441,20 +441,20 @@ new class extends Component {
                     <!-- Actions -->
                     <div class="flex items-center justify-between my-3">
                         <div class="flex space-x-2">
-                            <flux:button variant="primary" size="sm" href="{{ route('events.create', $event) }}">Show
+                            <flux:button icon="eye" variant="primary" size="sm" href="{{ route('events.create', $event) }}">Show
                             </flux:button>
 
                             @can('event-edit')
-                                <flux:button variant="danger" size="sm"
+                                <flux:button icon="pencil-square" variant="danger" size="sm"
                                              href="{{ route('events.create', $event) }}">Edit
                                 </flux:button>
                             @endcan
                         </div>
 
                         @if($event->rsvp_closes_at->isFuture())
-                            <flux:badge size="sm" color="blue" variant="solid">RSVP Open</flux:badge>
+                            <flux:badge icon="arrow-right-end-on-rectangle" size="sm" color="blue" variant="solid">RSVP Open</flux:badge>
                         @else
-                            <flux:badge size="sm" color="red" variant="solid">RSVP Closed</flux:badge>
+                            <flux:badge icon="arrow-left-start-on-rectangle" size="sm" color="red" variant="solid">RSVP Closed</flux:badge>
                         @endif
                     </div>
                 </div>

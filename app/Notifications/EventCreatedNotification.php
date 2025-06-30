@@ -8,12 +8,16 @@ use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Notifications\Messages\MailMessage;
 use Illuminate\Notifications\Notification;
 
+
 class EventCreatedNotification extends Notification implements ShouldQueue
 {
     use Queueable;
     public function __construct(public Event $event
     )
     {
+        // CRITICAL: Load relationships before the job is queued
+        $this->event->load(['title', 'venue']);
+
     }
 
     public function via($notifiable): array
@@ -34,7 +38,6 @@ class EventCreatedNotification extends Notification implements ShouldQueue
             ->line('**End Date:** ' . $this->event->end_date->format('d M Y g:i A'))
             ->action('View Event', route('events.show', $this->event))
             ->line('Thank you for being part of our community!');
-
     }
 
     public function toDatabase($notifiable): array
@@ -47,6 +50,7 @@ class EventCreatedNotification extends Notification implements ShouldQueue
             'url' => route('events.show', $this->event),
         ];
     }
+
 
     public function toArray($notifiable): array
     {

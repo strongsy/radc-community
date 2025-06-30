@@ -8,6 +8,8 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Relations\MorphMany;
+use Spatie\Image\Enums\Fit;
+use Spatie\MediaLibrary\MediaCollections\Models\Media;
 use Spatie\MediaLibrary\HasMedia;
 use Spatie\MediaLibrary\InteractsWithMedia;
 
@@ -75,5 +77,23 @@ class Event extends Model implements HasMedia
     public function dislikes(): MorphMany
     {
         return $this->morphMany(Dislike::class, 'dislikeable');
+    }
+
+    public function registerMediaConversions(?Media $media = null): void
+    {
+        $this
+            ->addMediaConversion('preview')
+            ->fit(Fit::Contain, 300, 300)
+            ->nonQueued();
+
+        $this
+            ->addMediaConversion('event')
+            ->fit(Fit::Contain, 400, 200)
+            ->nonQueued();
+    }
+
+    public static function last()
+    {
+        return static::all()->last();
     }
 }

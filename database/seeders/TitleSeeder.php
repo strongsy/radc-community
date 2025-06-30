@@ -23,7 +23,11 @@ class TitleSeeder extends Seeder
         ];
 
         foreach ($titles as $title) {
-            Title::create($title);
+            Title::firstOrCreate(
+                ['name' => $title['name']],
+                ['description' => $title['description']]
+            );
         }
+
     }
 }

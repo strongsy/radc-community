@@ -2,11 +2,13 @@
 
 use App\Models\Event;
 use App\Models\Title;
+use App\Models\User;
 use App\Models\Venue;
 use App\Models\Category;
 use App\Models\EventSession;
 use App\Models\FoodAllergy;
 use App\Models\DrinkPreference;
+use App\Notifications\EventCreatedNotification;
 use Illuminate\Support\Collection;
 use Illuminate\Validation\Rule;
 use Livewire\Attributes\Computed;
@@ -52,8 +54,15 @@ new class extends Component {
     #[Validate]
     public Collection $eventCategories;
 
-    // Sessions array
+    #[Validate]
+    public array $files = [];
+
+    // Sessions array - properly initialized
     public array $sessions = [];
+
+    // Add session count property if needed
+    public int $sessionCount = 0;
+
 
     public function mount(): void
     {
@@ -109,7 +118,8 @@ new class extends Component {
 
     private function updateSessionCount(): void
     {
-        $this->sessionCount = $this->sessions;
+        $this->sessionCount = count($this->sessions);
+
     }
 
     public function rules(): array
@@ -145,11 +155,13 @@ new class extends Component {
             $this->attachCategories($event);
             $this->createEventSessions($event);
             $this->handleFileUploads($event);
+            $this->sendNotificationEmail($event);
         });
 
-        $this->sendNotificationEmail($event);
         $this->showSuccessMessage();
-        $this->redirect(route('events.index'));
+        $this->reset();
+        $this->addSession();
+        /*$this->redirect(route('events.index'));*/
     }
 
     protected function createEvent(): Event
@@ -189,16 +201,30 @@ new class extends Component {
     protected function handleFileUploads(Event $event): void
     {
         if (!empty($this->files)) {
-            foreach ($this->files as $file) {
-                $event->addMedia($file->getRealPath())
-                    ->usingName($file->getClientOriginalName())
-                    ->toMediaCollection('event_files');
-            }
+            // Add files from Media Library Pro request
+            $event->addFromMediaLibraryRequest($this->files)
+                ->toMediaCollection('event');
         }
+
     }
 
     private function sendNotificationEmail(Event $event): void
     {
+
+        // Eager load relationships before sending notification
+        $event->load(['title', 'venue']);
+
+        // Get all the subscribed users
+        $subscribedUsers = User::where('is_subscribed', true)
+            ->where('is_approved', true)
+            ->where('is_blocked', false)
+            ->get();
+
+        // Send a notification to each of the subscribed users
+        Notification::send(
+            $subscribedUsers,
+            new EventCreatedNotification($event)
+        );
 
     }
 
@@ -217,10 +243,10 @@ new class extends Component {
 
 {{-- Component layout --}}
 <div
-    class="flex flex-col space-y-6 translate-y-0 starting:translate-y-6 object-cover starting:opacity-0 opacity-100 transition-all duration-750">
+    class="flex flex-col translate-y-0 starting:translate-y-6 object-cover starting:opacity-0 opacity-100 transition-all duration-750">
 
     {{-- Form start here --}}
-    <form wire:submit.prevent="save" class="space-y-6">
+    <form wire:submit.prevent="save">
         {{-- Event --}}
         <flux:card>
             <flux:heading size="xl" class="mb-6">Create New Community Event</flux:heading>
@@ -235,21 +261,22 @@ new class extends Component {
             <flux:separator variant="subtle" class="mb-6"/>
 
             <flux:fieldset>
-                <div class="grid 2xl:grid-cols-3 gap-x-4 gap-y-6">
+                <div class="grid 2xl:grid-cols-3 gap-x-4">
                     <div>
                         <flux:select badge="required" required variant="listbox" searchable placeholder="Choose type..."
                                      label="Event type"
                                      wire:model.lazy="type">
-                            @foreach ($eventTypes as $type)
+                            @foreach ($eventTypes ?? [] as $type)
                                 <flux:select.option value="{{ $type->id }}">{{ $type->name }}</flux:select.option>
                             @endforeach
                         </flux:select>
                     </div>
 
                     <div>
-                        <flux:select badge="required" required variant="listbox" searchable placeholder="Choose venue..." label="Event venue"
+                        <flux:select badge="required" required variant="listbox" searchable
+                                     placeholder="Choose venue..." label="Event venue"
                                      wire:model.lazy="venue">
-                            @foreach ($eventLocations as $location)
+                            @foreach ($eventLocations ?? [] as $location)
                                 <flux:select.option
                                     value="{{ $location->id }}">{{ $location->name }}</flux:select.option>
                             @endforeach
@@ -257,10 +284,11 @@ new class extends Component {
                     </div>
 
                     <div>
-                        <flux:select badge="required" required variant="listbox" multiple searchable placeholder="Choose categories..."
+                        <flux:select badge="required" required variant="listbox" multiple searchable
+                                     placeholder="Choose categories..."
                                      label="Event categories"
                                      wire:model.lazy="categories">
-                            @foreach ($eventCategories as $category)
+                            @foreach ($eventCategories ?? [] as $category)
                                 <flux:select.option
                                     value="{{ $category->id }}">{{ $category->name }}</flux:select.option>
                             @endforeach
@@ -275,7 +303,8 @@ new class extends Component {
 
                 <div class="grid 2xl:grid-cols-3 gap-4 space-y-6 mt-6">
                     <div>
-                        <flux:date-picker badge="required" required wire:model.lazy="event_start_date" label="Start date"
+                        <flux:date-picker badge="required" required wire:model.lazy="event_start_date"
+                                          label="Start date"
                                           class="**:data-[slot=content]"/>
                     </div>
 
@@ -285,14 +314,33 @@ new class extends Component {
                     </div>
 
                     <div>
-                        <flux:date-picker badge="required" required wire:model.lazy="close_rsvp_at" label="Close RSVP at"
+                        <flux:date-picker badge="required" required wire:model.lazy="close_rsvp_at"
+                                          label="Close RSVP at"
                                           class="**:data-[slot=content]"/>
                     </div>
 
                 </div>
+
+                <div class="grid grid-cols-1 col-span-full">
+                    <!-- File Upload Section -->
+                    <flux:fieldset>
+                        <flux:label badge="optional" class="mb-2!">Event Documents</flux:label>
+                        <livewire:media-library
+                            wire:model="files"
+                            multiple
+                            max-size="10240"
+                            max-items="20"
+                        />
+                        <flux:description class="mt-2!">
+                            Upload documents and images for your event.
+                            Supported formats: JPG, PNG, DOC, DOCX, PPT, PPTX, XLS, XLSX, PDF (Max: 10MB per file)
+                        </flux:description>
+                        <flux:error name="files"/>
+                    </flux:fieldset>
+                </div>
             </flux:fieldset>
 
-            <div class="flex flex-col max-h-screen overflow-hidden">
+            <div class="flex flex-col max-h-screen overflow-hidden mt-6">
                 <flux:heading class="text-sm md:text-lg">Event Sessions</flux:heading>
                 <flux:text variant="subtle" class="text-xs md:text-md">
                     Add your sessions (sub events) to this event. You must have at least one and a
@@ -303,7 +351,7 @@ new class extends Component {
 
                 <div class="flex justify-between items-center">
                     <flux:text size="sm">Sessions ({{ count($sessions) }}/40)</flux:text>
-                    <flux:button icon="calendar-days" size="sm" wire:click="addSession" variant="primary"
+                    <flux:button icon="calendar-days" wire:click="addSession" variant="primary"
                                  :disabled="count($sessions) >= 40">
                         Add Session
                     </flux:button>
@@ -312,9 +360,9 @@ new class extends Component {
         </flux:card>
 
         {{-- Sessions --}}
-        <div class="flex flex-col max-h-fit overflow-hidden space-y-6">
+        <div class="flex flex-col max-h-fit overflow-hidden space-y-6 mt-6">
             <main class="flex-1 overflow-y-scroll">
-                <div class="grid grid-cols-1 2xl:grid-cols-3 gap-4">
+                <div class="grid grid-cols-1  gap-4">
                     @foreach ($sessions as $index => $session)
                         <flux:card class="gap-4 p-4!">
                             <div class="flex justify-between items-center my-6">
@@ -328,7 +376,7 @@ new class extends Component {
                                 @endif
                             </div>
 
-                            <div class="grid grid-cols-1 md:grid-cols-2 gap-x-4 space-y-6">
+                            <div class="grid grid-cols-1 md:grid-cols-3 gap-x-4 space-y-6">
                                 <div>
                                     <flux:input badge="required" required label="Title"
                                                 wire:model.lazy="sessions.{{ $index }}.name"
@@ -338,6 +386,12 @@ new class extends Component {
                                 <div>
                                     <flux:input badge="required" required label="Location"
                                                 wire:model.lazy="sessions.{{ $index }}.location"
+                                                class="**:data-[slot=content]"/>
+                                </div>
+
+                                <div>
+                                    <flux:input badge="optional" label="Capacity"
+                                                wire:model.lazy="sessions.{{ $index }}.capacity"
                                                 class="**:data-[slot=content]"/>
                                 </div>
 
@@ -365,10 +419,7 @@ new class extends Component {
                                                 class="**:data-[slot=content]"/>
                                 </div>
 
-                                <div>
-                                    <flux:input badge="optional" label="Capacity" wire:model.lazy="sessions.{{ $index }}.capacity"
-                                                class="**:data-[slot=content]"/>
-                                </div>
+
 
                                 <div>
                                     <flux:checkbox label="Allow guests"
@@ -387,6 +438,10 @@ new class extends Component {
                         <flux:button type="button" variant="filled" href="{{ route('events.index') }}">Back
                         </flux:button>
                         <flux:button type="submit" variant="primary">Save</flux:button>
+                        <flux:button icon="calendar-days" wire:click="addSession" variant="primary"
+                                     :disabled="count($sessions) >= 40">
+                            Add Session
+                        </flux:button>
                     </div>
                 </flux:card>
 
