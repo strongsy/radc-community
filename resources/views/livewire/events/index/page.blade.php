@@ -441,12 +441,12 @@ new class extends Component {
                     <!-- Actions -->
                     <div class="flex items-center justify-between my-3">
                         <div class="flex space-x-2">
-                            <flux:button icon="eye" variant="primary" size="sm" href="{{ route('events.create', $event) }}">Show
+                            <flux:button icon="eye" variant="primary" size="sm" href="{{ route('events.show', $event) }}">Show
                             </flux:button>
 
                             @can('event-edit')
                                 <flux:button icon="pencil-square" variant="danger" size="sm"
-                                             href="{{ route('events.create', $event) }}">Edit
+                                             href="{{ route('events.edit', $event) }}">Edit
                                 </flux:button>
                             @endcan
                         </div>

@@ -8,6 +8,7 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Relations\MorphMany;
+use Spatie\Image\Enums\CropPosition;
 use Spatie\Image\Enums\Fit;
 use Spatie\MediaLibrary\MediaCollections\Models\Media;
 use Spatie\MediaLibrary\HasMedia;
@@ -84,12 +85,14 @@ class Event extends Model implements HasMedia
         $this
             ->addMediaConversion('preview')
             ->fit(Fit::Contain, 300, 300)
-            ->nonQueued();
+            ->queued();
 
         $this
             ->addMediaConversion('event')
-            ->fit(Fit::Contain, 400, 200)
-            ->nonQueued();
+            /*->crop(800, 600, CropPosition::Top)*/
+            ->fit(Fit::Contain, 800, 600)
+            ->sharpen(10)
+            ->queued();
     }
 
     public static function last()

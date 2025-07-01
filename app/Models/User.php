@@ -130,7 +130,12 @@ class User extends Authenticatable implements MustVerifyEmail
     // functions
     public function getFirstNameAttribute(): string
     {
-        return explode(' ', $this->name)[0];
+        if (empty($this->name)) {
+            return 'Friend';
+        }
+
+        $nameParts = explode(' ', trim($this->name));
+        return $nameParts[0] ?? 'Friend';
     }
 
     protected static function booted(): void

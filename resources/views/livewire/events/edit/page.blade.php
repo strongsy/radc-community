@@ -1,3 +1,4 @@
+
 <?php
 
 use App\Models\Event;
@@ -6,9 +7,7 @@ use App\Models\User;
 use App\Models\Venue;
 use App\Models\Category;
 use App\Models\EventSession;
-use App\Models\FoodAllergy;
-use App\Models\DrinkPreference;
-use App\Notifications\EventCreatedNotification;
+use App\Notifications\EventUpdatedNotification;
 use Carbon\Carbon;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Routing\Redirector;
@@ -16,10 +15,8 @@ use Illuminate\Support\Collection;
 use Illuminate\Validation\Rule;
 use Illuminate\Validation\ValidationException;
 use Livewire\Attributes\Computed;
-use Livewire\Attributes\Validate;
 use Livewire\Volt\Component;
 use Illuminate\Support\Facades\DB;
-use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Notification;
 use Spatie\MediaLibraryPro\Livewire\Concerns\WithMedia;
@@ -28,57 +25,83 @@ use Flux\Flux;
 new class extends Component {
     use WithMedia;
 
+    public Event $event;
+
     // Event fields
     public string $type = '';
-
-    #[Validate]
     public string $venue = '';
-
-    #[Validate]
     public array $categories = [];
-
-    #[Validate]
     public string $description = '';
-
-    #[Validate]
     public string $event_start_date = '';
-
-    #[Validate]
     public string $event_end_date = '';
-
-    #[Validate]
     public string $close_rsvp_at = '';
 
     // Collections
-    #[Validate('required')]
     public Collection $eventTypes;
-
-    #[Validate]
     public Collection $eventLocations;
-
-    #[Validate]
     public Collection $eventCategories;
-
-    #[Validate]
     public array $files = [];
 
-    // Sessions array - properly initialized with the default value
+    // Sessions array
     public array $sessions = [];
-
-    // Add session count property if needed
     public int $sessionCount = 0;
 
-    public function mount(): void
+    // Track sessions to delete
+    public array $sessionsToDelete = [];
+
+    public function mount(int $id): void
+    {
+        $this->event = Event::with(['title', 'venue', 'categories', 'eventSessions', 'media'])->findOrFail($id);
+
+        // Check if the user can edit this event
+        if (!auth()->user()->can('event-update') && $this->event->user_id !== auth()->id()) {
+            abort(403, 'You are not authorized to edit this event.');
+        }
+
+        $this->loadCollections();
+        $this->populateFormData();
+    }
+
+    private function loadCollections(): void
     {
         $this->eventTypes = Title::orderBy('name')->get() ?: collect();
         $this->eventLocations = Venue::orderBy('name')->get() ?: collect();
         $this->eventCategories = Category::orderBy('name')->get() ?: collect();
+    }
 
-        // Initialize a session array if it's empty
+    private function populateFormData(): void
+    {
+        $this->type = (string) $this->event->title_id;
+        $this->venue = (string) $this->event->venue_id;
+        $this->categories = $this->event->categories->pluck('id')->toArray();
+        $this->description = $this->event->description ?? '';
+        $this->event_start_date = $this->event->start_date?->format('Y-m-d') ?? '';
+        $this->event_end_date = $this->event->end_date?->format('Y-m-d') ?? '';
+        $this->close_rsvp_at = $this->event->rsvp_closes_at?->format('Y-m-d') ?? '';
+
+        // Load existing sessions with properly formatted times
+        $this->sessions = $this->event->eventSessions->map(function ($session) {
+            return [
+                'id' => $session->id,
+                'name' => $session->name ?? '',
+                'description' => $session->description ?? '',
+                'location' => $session->location ?? '',
+                'start_date' => $session->start_date ? Carbon::parse($session->start_date)->format('Y-m-d') : '',
+                'start_time' => $session->start_time ? Carbon::parse($session->start_time)->format('H:i') : '',
+                'end_time' => $session->end_time ? Carbon::parse($session->end_time)->format('H:i') : '',
+                'allow_guests' => $session->allow_guests ?? false,
+            ];
+        })->toArray();
+
+        // Ensure at least one session exists
         if (empty($this->sessions)) {
-            $this->sessions = [];
             $this->addSession();
         }
+
+        $this->updateSessionCount();
+
+        // Initialize media library with existing files
+        $this->files = $this->event->getMedia('event')->toArray();
     }
 
     public function addSession(): void
@@ -86,7 +109,7 @@ new class extends Component {
         $this->clearValidation();
         $this->sessions[] = $this->createEmptySession();
         $this->updateSessionCount();
-        $this->dispatch('serial-added', ['index' => count($this->sessions) - 1]);
+        $this->dispatch('session-added', ['index' => count($this->sessions) - 1]);
     }
 
     public function removeSession(int $index): void
@@ -96,6 +119,12 @@ new class extends Component {
         }
 
         $this->clearValidation();
+
+        // If a session has an ID, mark it for deletion
+        if (isset($this->sessions[$index]['id'])) {
+            $this->sessionsToDelete[] = $this->sessions[$index]['id'];
+        }
+
         unset($this->sessions[$index]);
         $this->sessions = array_values($this->sessions);
         $this->updateSessionCount();
@@ -126,7 +155,7 @@ new class extends Component {
             'venue' => 'required',
             'categories' => 'required|array|min:1',
             'description' => 'required',
-            'event_start_date' => 'required|date|after:' . Carbon::now()->addDays(7),
+            'event_start_date' => 'required|date',
             'event_end_date' => 'required|date|after_or_equal:event_start_date',
             'close_rsvp_at' => 'required|date|before:event_start_date',
 
@@ -141,21 +170,21 @@ new class extends Component {
         ];
     }
 
-    public function save(): Redirector
+    public function update(): Redirector
     {
         try {
-            // Debug: Log the form data
-            Log::info('Save method called', [
+            Log::info('Update method called', [
+                'event_id' => $this->event->id,
                 'type' => $this->type,
                 'venue' => $this->venue,
                 'categories' => $this->categories,
                 'sessions_count' => count($this->sessions),
-                'sessions' => $this->sessions
             ]);
 
             // Validate sessions before proceeding
             if (empty($this->sessions)) {
-                return $this->addError('sessions', 'At least one session is required.');
+                $this->addError('sessions', 'At least one session is required.');
+                return redirect()->back();
             }
 
             // Validate all fields
@@ -164,61 +193,47 @@ new class extends Component {
             Log::info('Validation passed, starting transaction');
 
             DB::transaction(function () {
-                $event = $this->createEvent();
-                Log::info('Event created', ['event_id' => $event->id]);
+                $this->updateEvent();
+                Log::info('Event updated');
 
-                $this->attachCategories($event);
-                Log::info('Categories attached');
+                $this->updateCategories();
+                Log::info('Categories updated');
 
-                $this->createEventSessions($event);
-                Log::info('Sessions created');
+                $this->updateEventSessions();
+                Log::info('Sessions updated');
 
-                $this->handleFileUploads($event);
+                $this->handleFileUploads();
                 Log::info('Files handled');
 
-                $this->sendNotificationEmail($event);
-                Log::info('Notifications sent');
+                $this->sendUpdateNotification();
+                Log::info('Update notifications sent');
             });
 
             $this->showSuccessMessage();
-            $this->reset();
-            $this->addSession();
 
-            // Redirect to events index
-            //return redirect(route('events.index'))->with('status', 'Thank you for your registration . You will receive an email shortly if your registration is approved . ');
             return redirect(route('events.index'));
 
         } catch (ValidationException $e) {
             Log::error('Validation failed', [
                 'errors' => $e->errors(),
-                'data' => [
-                    'type' => $this->type,
-                    'venue' => $this->venue,
-                    'categories' => $this->categories,
-                    'sessions' => $this->sessions
-                ]
+                'event_id' => $this->event->id,
             ]);
             throw $e;
         } catch (\Exception $e) {
-            Log::error('Failed to create event', [
+            Log::error('Failed to update event', [
                 'error' => $e->getMessage(),
                 'trace' => $e->getTraceAsString(),
-                'data' => [
-                    'type' => $this->type,
-                    'venue' => $this->venue,
-                    'categories' => $this->categories,
-                    'sessions' => $this->sessions
-                ]
+                'event_id' => $this->event->id,
             ]);
 
-            $this->addError('general', 'Failed to create event: ' . $e->getMessage());
+            $this->addError('general', 'Failed to update event: ' . $e->getMessage());
+            return redirect()->back();
         }
     }
 
-    protected function createEvent(): Event
+    protected function updateEvent(): void
     {
-        return Event::create([
-            'user_id' => auth()->id(),
+        $this->event->update([
             'title_id' => $this->type,
             'venue_id' => $this->venue,
             'description' => $this->description,
@@ -228,69 +243,89 @@ new class extends Component {
         ]);
     }
 
-    private function attachCategories(Event $event): void
+    private function updateCategories(): void
     {
         if (!empty($this->categories)) {
-            $event->categories()->attach($this->categories);
+            $this->event->categories()->sync($this->categories);
         }
     }
 
-    protected function createEventSessions(Event $event): void
+    protected function updateEventSessions(): void
     {
+        // Delete removed sessions
+        if (!empty($this->sessionsToDelete)) {
+            EventSession::whereIn('id', $this->sessionsToDelete)->delete();
+        }
+
         foreach ($this->sessions as $sessionData) {
             if (!is_array($sessionData)) {
                 Log::warning('Session data is not an array', [
                     'session_data_type' => gettype($sessionData),
                     'session_data' => $sessionData,
-                    'event_id' => $event->id
+                    'event_id' => $this->event->id
                 ]);
                 continue;
             }
 
-            $event->eventSessions()->create([
-                'name' => $sessionData['name'] ?? '',
-                'description' => $sessionData['description'] ?? '',
-                'location' => $sessionData['location'] ?? '',
-                'start_date' => $sessionData['start_date'] ?? null,
-                'start_time' => $sessionData['start_time'] ?? null,
-                'end_time' => $sessionData['end_time'] ?? null,
-                'allow_guests' => $sessionData['allow_guests'] ?? false,
-            ]);
+            if (isset($sessionData['id']) && $sessionData['id']) {
+                // Update existing session
+                EventSession::where('id', $sessionData['id'])->update([
+                    'name' => $sessionData['name'] ?? '',
+                    'description' => $sessionData['description'] ?? '',
+                    'location' => $sessionData['location'] ?? '',
+                    'start_date' => $sessionData['start_date'] ?? null,
+                    'start_time' => $sessionData['start_time'] ?? null,
+                    'end_time' => $sessionData['end_time'] ?? null,
+                    'allow_guests' => $sessionData['allow_guests'] ?? false,
+                ]);
+            } else {
+                // Create a new session
+                $this->event->eventSessions()->create([
+                    'name' => $sessionData['name'] ?? '',
+                    'description' => $sessionData['description'] ?? '',
+                    'location' => $sessionData['location'] ?? '',
+                    'start_date' => $sessionData['start_date'] ?? null,
+                    'start_time' => $sessionData['start_time'] ?? null,
+                    'end_time' => $sessionData['end_time'] ?? null,
+                    'allow_guests' => $sessionData['allow_guests'] ?? false,
+                ]);
+            }
         }
     }
 
-    protected function handleFileUploads(Event $event): void
+    protected function handleFileUploads(): void
     {
         if (!empty($this->files)) {
-            $event->addFromMediaLibraryRequest($this->files)
+            $this->event->addFromMediaLibraryRequest($this->files)
                 ->toMediaCollection('event');
         }
     }
 
-    private function sendNotificationEmail(Event $event): void
+    private function sendUpdateNotification(): void
     {
         try {
-            $event->load(['title', 'venue']);
+            $this->event->load(['title', 'venue']);
 
             $subscribedUsers = User::where('is_subscribed', true)
                 ->where('is_approved', true)
                 ->where('is_blocked', false)
                 ->whereNotNull('name')
                 ->whereNotNull('email')
+                ->where('id', '!=', auth()->id()) // Don't notify the person who updated
                 ->get();
 
             if ($subscribedUsers->count() > 0) {
-                $subscribedUsers->chunk(50)->each(function ($userChunk) use ($event) {
+                $subscribedUsers->chunk(50)->each(function ($userChunk) {
                     Notification::send(
                         $userChunk,
-                        new EventCreatedNotification($event)
+                        new EventUpdatedNotification($this->event)
                     );
                 });
             }
 
         } catch (\Exception $e) {
-            Log::error('Failed to send event notification emails', [
-                'event_id' => $event->id,
+            Log::error('Failed to send event update notification emails', [
+                'event_id' => $this->event->id,
                 'error' => $e->getMessage(),
                 'trace' => $e->getTraceAsString()
             ]);
@@ -300,38 +335,38 @@ new class extends Component {
     private function showSuccessMessage(): void
     {
         Flux::toast(
-            text: 'Event saved successfully',
-            heading: 'Event Saved',
+            text: 'Event updated successfully',
+            heading: 'Event Updated',
             variant: 'success',
         );
     }
 };
 ?>
-<div>
-    <div
-        class="flex flex-col translate-y-0 starting:translate-y-6 object-cover starting:opacity-0 opacity-100 transition-all duration-750 space-y-6">
 
-        <flux:heading size="xl" class="mb-6">Create New Community Event</flux:heading>
+<div>
+    <div class="flex flex-col translate-y-0 starting:translate-y-6 object-cover starting:opacity-0 opacity-100 transition-all duration-750 space-y-6">
+
+        <flux:heading size="xl" class="mb-6">Edit Event: {{ $event->title->name }}</flux:heading>
 
         <!-- Display general errors -->
-        {{--@error('general')
+        @error('general')
         <flux:card variant="danger">
             <flux:text>{{ $message }}</flux:text>
         </flux:card>
-        @enderror--}}
+        @enderror
 
         <flux:card>
             <flux:heading size="xl" class="mb-6">Event Details</flux:heading>
-            <form wire:submit="save">
+            <form wire:submit="update">
                 <flux:fieldset>
                     <div class="grid 2xl:grid-cols-3 gap-x-4">
                         <div>
                             <flux:select badge="required" required variant="listbox" searchable
                                          placeholder="Choose type..."
                                          label="Event type"
-                                         wire:model.lazy="type">
-                                @forelse($eventTypes as $type)
-                                    <flux:select.option value="{{ $type->id }}">{{ $type->name }}</flux:select.option>
+                                         wire:model="type">
+                                @forelse($eventTypes as $eventType)
+                                    <flux:select.option value="{{ $eventType->id }}">{{ $eventType->name }}</flux:select.option>
                                 @empty
                                     <flux:text>No types found</flux:text>
                                 @endforelse
@@ -341,7 +376,7 @@ new class extends Component {
                         <div>
                             <flux:select badge="required" required variant="listbox" searchable
                                          placeholder="Choose venue..." label="Event venue"
-                                         wire:model.lazy="venue">
+                                         wire:model="venue">
                                 @forelse($eventLocations as $location)
                                     <flux:select.option
                                         value="{{ $location->id }}">{{ $location->name }}</flux:select.option>
@@ -355,7 +390,7 @@ new class extends Component {
                             <flux:select badge="required" required variant="listbox" multiple searchable
                                          placeholder="Choose categories..."
                                          label="Event categories"
-                                         wire:model.lazy="categories">
+                                         wire:model="categories">
                                 @forelse($eventCategories as $category)
                                     <flux:select.option
                                         value="{{ $category->id }}">{{ $category->name }}</flux:select.option>
@@ -367,23 +402,23 @@ new class extends Component {
                     </div>
 
                     <div class="grid grid-cols-1 mt-6">
-                        <flux:editor badge="required" required wire:model.lazy="description" label="Event description"
+                        <flux:editor badge="required" required wire:model="description" label="Event description"
                                      class="**:data-[slot=content]:min-h-[100px]!"/>
                     </div>
 
                     <div class="grid 2xl:grid-cols-3 gap-4 space-y-6 mt-6">
                         <div>
-                            <flux:date-picker badge="required" required wire:model.lazy="event_start_date"
+                            <flux:date-picker badge="required" required wire:model="event_start_date"
                                               label="Start date"/>
                         </div>
 
                         <div>
-                            <flux:date-picker badge="required" required wire:model.lazy="event_end_date"
+                            <flux:date-picker badge="required" required wire:model="event_end_date"
                                               label="End date"/>
                         </div>
 
                         <div>
-                            <flux:date-picker badge="required" required wire:model.lazy="close_rsvp_at"
+                            <flux:date-picker badge="required" required wire:model="close_rsvp_at"
                                               label="Close RSVP at"/>
                         </div>
                     </div>
@@ -427,13 +462,18 @@ new class extends Component {
                 </div>
 
                 <main>
-                    <div class="grid grid-cols-1  gap-4">
+                    <div class="grid grid-cols-1 gap-4">
                         @if(is_array($sessions))
                             @forelse ($sessions as $index => $session)
                                 <flux:card class="gap-4 p-4!">
                                     <div class="flex justify-between items-center my-6">
                                         <flux:badge size="sm" color="amber" variant="solid">
                                             Session {{ $index + 1 }}
+                                            @if(isset($session['id']))
+                                                <span class="ml-1">(Existing)</span>
+                                            @else
+                                                <span class="ml-1">(New)</span>
+                                            @endif
                                         </flux:badge>
                                         @if(count($sessions) > 1)
                                             <flux:button icon="trash" wire:click="removeSession({{ $index }})"
@@ -446,42 +486,42 @@ new class extends Component {
                                     <div class="grid grid-cols-1 md:grid-cols-3 gap-x-4 space-y-6">
                                         <div>
                                             <flux:input badge="required" required label="Title"
-                                                        wire:model.lazy="sessions.{{ $index }}.name"/>
+                                                        wire:model="sessions.{{ $index }}.name"/>
                                         </div>
 
                                         <div>
                                             <flux:input badge="required" required label="Location"
-                                                        wire:model.lazy="sessions.{{ $index }}.location"/>
+                                                        wire:model="sessions.{{ $index }}.location"/>
                                         </div>
 
                                         <div>
                                             <flux:input badge="optional" label="Capacity"
-                                                        wire:model.lazy="sessions.{{ $index }}.capacity"/>
+                                                        wire:model="sessions.{{ $index }}.capacity"/>
                                         </div>
 
                                         <div class="grid col-span-full">
                                             <flux:textarea badge="required" rows="3" required label="Description"
-                                                           wire:model.lazy="sessions.{{ $index }}.description"/>
+                                                           wire:model="sessions.{{ $index }}.description"/>
                                         </div>
 
                                         <div>
                                             <flux:date-picker badge="required" required label="Start date"
-                                                              wire:model.lazy="sessions.{{ $index }}.start_date"/>
+                                                              wire:model="sessions.{{ $index }}.start_date"/>
                                         </div>
 
                                         <div>
                                             <flux:input badge="required" required type="time" label="Start time"
-                                                        wire:model.lazy="sessions.{{ $index }}.start_time"/>
+                                                        wire:model="sessions.{{ $index }}.start_time"/>
                                         </div>
 
                                         <div>
                                             <flux:input badge="required" required type="time" label="End time"
-                                                        wire:model.lazy="sessions.{{ $index }}.end_time"/>
+                                                        wire:model="sessions.{{ $index }}.end_time"/>
                                         </div>
 
                                         <div>
                                             <flux:checkbox label="Allow guests"
-                                                           wire:model.lazy="sessions.{{ $index }}.allow_guests"/>
+                                                           wire:model="sessions.{{ $index }}.allow_guests"/>
                                         </div>
                                     </div>
                                 </flux:card>
@@ -493,8 +533,8 @@ new class extends Component {
                 </main>
 
                 <div class="flex justify-end mt-6 gap-4">
-                    <flux:button type="button" variant="filled" href="{{ route('events.index') }}">Back</flux:button>
-                    <flux:button type="submit" variant="primary">Save</flux:button>
+                    <flux:button type="button" variant="filled" href="{{ route('events.index') }}">Cancel</flux:button>
+                    <flux:button type="submit" variant="primary">Update Event</flux:button>
                 </div>
             </form>
         </flux:card>

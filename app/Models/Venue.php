@@ -22,4 +22,17 @@ class Venue extends Model
     {
         return $this->hasMany(Event::class);
     }
+
+    public function getFullAddress(): string
+    {
+        $addressParts = array_filter([
+            $this->address,
+            $this->city,
+            $this->county,
+            $this->post_code,
+        ]);
+
+        return implode(', ', $addressParts);
+    }
+
 }
