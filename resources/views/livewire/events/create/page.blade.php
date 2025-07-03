@@ -65,8 +65,17 @@ new class extends Component {
     // Sessions array - properly initialized with the default value
     public array $sessions = [];
 
+    // Venues array for modal
+    public array $saving = [];
+    public array $updating = [];
+
     // Add session count property if needed
     public int $sessionCount = 0;
+
+    // Venue modal
+    public bool $showVenueModal = false;
+
+    public bool $isCreating = false;
 
     public function mount(): void
     {
@@ -134,14 +143,91 @@ new class extends Component {
             'sessions' => 'required|array|min:1',
             'sessions.*.name' => 'required|string|max:255',
             'sessions.*.location' => 'required|string|max:255',
-            'sessions.*.description' => 'required|string',
+            'sessions.*.description' => 'required|string|max:1000',
             'sessions.*.start_date' => 'required|date|before_or_equal:event_end_date',
             'sessions.*.start_time' => 'required',
             'sessions.*.end_time' => 'required|after:sessions.*.start_time',
+            'sessions.*.grant' => 'nullable|numeric|regex:/^\d+(\.\d{0,2})?$/',
+            'sessions.*.cost' => 'nullable|numeric|regex:/^\d+(\.\d{0,2})?$/',
+            'sessions.*.capacity' => 'nullable|numeric',
         ];
     }
 
-    public function save(): Redirector
+    private function convertToFloat($value): ?float
+    {
+        if (empty($value)) {
+            return null;
+        }
+        return (float) $value;
+    }
+
+
+    public function venueModal(): void
+    {
+        $this->isCreating = true;
+        $this->showVenueModal = true;
+    }
+
+    public function resetVenueModal(): void
+    {
+        $this->clearValidation();
+        $this->showVenueModal = false;
+    }
+
+    public function saveVenue(): void
+    {
+        $this->validate([
+            'saving.name' => 'required|string|max:255',
+            'saving.address' => 'required|string|max:255',
+            'saving.city' => 'required|string|max:255',
+            'saving.county' => 'required|string|max:255',
+            'saving.post_code' => 'required|string|max:10',
+        ]);
+
+        try {
+            // Auto-format the name to include the city if not already present
+            $venueName = $this->saving['name'];
+            $city = $this->saving['city'];
+
+            // Check if the name already contains the city pattern
+            if (!str_contains($venueName, ' - ')) {
+                $venueName .= ' - ' . $city;
+            }
+
+            $venue = Venue::create([
+                'name' => $venueName,
+                'address' => $this->saving['address'],
+                'city' => strToUpper($this->saving['city']),
+                'county' => $this->saving['county'],
+                'post_code' => strtoupper($this->saving['post_code']),
+            ]);
+
+            $this->venues = Venue::all();
+            $this->saving['venue_id'] = $venue->id;
+
+
+            // Reset and show success...
+            $this->saving = [];
+            $this->isCreating = false;
+            $this->showVenueModal = false;
+            $this->clearValidation();
+
+            Flux::toast(
+                text: 'Venue created successfully',
+                heading: 'Success',
+                variant: 'success',
+            );
+
+        } catch (\Exception $e) {
+            Flux::toast(
+                text: 'Failed to create venue: ' . $e->getMessage(),
+                heading: 'Error',
+                variant: 'danger',
+            );
+        }
+    }
+
+    public function save()
     {
         try {
             // Debug: Log the form data
@@ -185,7 +271,6 @@ new class extends Component {
             $this->addSession();
 
             // Redirect to events index
-            //return redirect(route('events.index'))->with('status', 'Thank you for your registration . You will receive an email shortly if your registration is approved . ');
             return redirect(route('events.index'));
 
         } catch (ValidationException $e) {
@@ -199,7 +284,7 @@ new class extends Component {
                 ]
             ]);
             throw $e;
-        } catch (\Exception $e) {
+        } catch (Exception $e) {
             Log::error('Failed to create event', [
                 'error' => $e->getMessage(),
                 'trace' => $e->getTraceAsString(),
@@ -247,6 +332,14 @@ new class extends Component {
                 continue;
             }
 
+            // Helper function to convert string to float or null
+            $convertToFloat = static function ($value) {
+                if (empty($value)) {
+                    return null;
+                }
+                return (float)$value;
+            };
+
             $event->eventSessions()->create([
                 'name' => $sessionData['name'] ?? '',
                 'description' => $sessionData['description'] ?? '',
@@ -254,6 +347,9 @@ new class extends Component {
                 'start_date' => $sessionData['start_date'] ?? null,
                 'start_time' => $sessionData['start_time'] ?? null,
                 'end_time' => $sessionData['end_time'] ?? null,
+                'cost' => $this->convertToFloat($sessionData['cost'] ?? null),
+                'grant' => $this->convertToFloat($sessionData['grant'] ?? null),
+                'capacity' => $sessionData['capacity'] ?? null,
                 'allow_guests' => $sessionData['allow_guests'] ?? false,
             ]);
         }
@@ -288,7 +384,7 @@ new class extends Component {
                 });
             }
 
-        } catch (\Exception $e) {
+        } catch (Exception $e) {
             Log::error('Failed to send event notification emails', [
                 'event_id' => $event->id,
                 'error' => $e->getMessage(),
@@ -309,7 +405,7 @@ new class extends Component {
 ?>
 <div>
     <div
-        class="flex flex-col translate-y-0 starting:translate-y-6 object-cover starting:opacity-0 opacity-100 transition-all duration-750 space-y-6">
+        class="flex flex-col mx-auto max-w-7xl translate-y-0 starting:translate-y-6 object-cover starting:opacity-0 opacity-100 transition-all duration-750 space-y-6">
 
         <flux:heading size="xl" class="mb-6">Create New Community Event</flux:heading>
 
@@ -339,16 +435,27 @@ new class extends Component {
                         </div>
 
                         <div>
-                            <flux:select badge="required" required variant="listbox" searchable
-                                         placeholder="Choose venue..." label="Event venue"
-                                         wire:model.lazy="venue">
-                                @forelse($eventLocations as $location)
-                                    <flux:select.option
-                                        value="{{ $location->id }}">{{ $location->name }}</flux:select.option>
-                                @empty
-                                    <flux:text>No locations found</flux:text>
-                                @endforelse
-                            </flux:select>
+
+                            <flux:field>
+                                <flux:label badge="required">Event Venue</flux:label>
+                                <flux:input.group>
+                                    <flux:button icon="plus" wire:click="venueModal"/>
+                                    <flux:select badge="required" required variant="listbox" searchable
+                                                 placeholder="Choose venue..."
+                                                 wire:model.live="venue">
+                                        @forelse($eventLocations as $location)
+                                            <flux:select.option
+                                                value="{{ $location->id }}">{{ $location->name }}</flux:select.option>
+                                        @empty
+                                            <flux:text>No locations found</flux:text>
+                                        @endforelse
+                                    </flux:select>
+                                </flux:input.group>
+                                <flux:error name="venue"/>
+
+                            </flux:field>
+
+
                         </div>
 
                         <div>
@@ -405,6 +512,7 @@ new class extends Component {
                     </div>
                 </flux:fieldset>
 
+                {{-- Event Sessions --}}
                 <div class="mb-6">
                     <div class="flex flex-col max-h-screen overflow-hidden mt-6">
                         <flux:heading size="xl">Event Sessions</flux:heading>
@@ -480,9 +588,35 @@ new class extends Component {
                                         </div>
 
                                         <div>
+                                            <flux:field>
+                                                <flux:label badge="optional">Grant</flux:label>
+                                                <flux:input.group>
+                                                    <flux:input.group.prefix>£</flux:input.group.prefix>
+                                                    <flux:input badge="optional" placeholder="e.g. £10.00"
+                                                                wire:model.lazy="sessions.{{ $index }}.grant"/>
+                                                </flux:input.group>
+                                                <flux:error name="grant"/>
+                                            </flux:field>
+                                        </div>
+
+                                        <div>
+                                            <flux:field>
+                                                <flux:label badge="optional">Cost</flux:label>
+                                                <flux:input.group>
+                                                    <flux:input.group.prefix>£</flux:input.group.prefix>
+                                                    <flux:input badge="optional" placeholder="e.g. £10.00"
+                                                                wire:model.lazy="sessions.{{ $index }}.cost"/>
+                                                </flux:input.group>
+                                                <flux:error name="cost"/>
+                                            </flux:field>
+                                        </div>
+
+                                        <div class="md:mt-10">
                                             <flux:checkbox label="Allow guests"
                                                            wire:model.lazy="sessions.{{ $index }}.allow_guests"/>
+
                                         </div>
+
                                     </div>
                                 </flux:card>
                             @empty
@@ -499,4 +633,44 @@ new class extends Component {
             </form>
         </flux:card>
     </div>
+
+    <!-- venue modal -->
+    <form wire:submit.prevent="saveVenue">
+        <flux:modal wire:model="showVenueModal"
+                    size="lg" class="max-w-sm w-auto">
+            <flux:heading class="mb-6">{{ $isCreating ? 'Create' : 'Edit' }} Venue</flux:heading>
+            <div class="flex flex-col gap-4">
+                <flux:input required badge="required" wire:model="saving.name" label="Name" placeholder="Name"
+                            type="text"
+                            class="w-full"/>
+                <flux:input required badge="required" wire:model="saving.address" label="Address" placeholder="Address"
+                            type="text"
+                            class="w-full"/>
+                <flux:input required badge="required" wire:model="saving.city" label="City" placeholder="City"
+                            type="text"
+                            class="w-full"/>
+                <flux:select required badge="required" variant="listbox" searchable wire:model="saving.county"
+                             label="County" placeholder="County"
+                             type="text"
+                             class="w-full">
+                    @foreach(Venue::venueCounties() as $county)
+                        <flux:select.option value="{{ $county }}">{{ $county }}</flux:select.option>
+                    @endforeach
+                </flux:select>
+                <flux:input required badge="required" wire:model="saving.post_code" label="Post Code"
+                            placeholder="Post Code" type="text"
+                            class="w-full"/>
+            </div>
+            <div class="flex w-full items-end justify-end gap-4 mt-4">
+                <flux:button type="button" variant="primary" wire:click="resetVenueModal()"
+
+                >Close
+                </flux:button>
+                <flux:button type="submit" variant="danger" class="disabled:cursor-not-allowed disabled:opacity-75">
+                    Save
+                </flux:button>
+            </div>
+
+        </flux:modal>
+    </form>
 </div>

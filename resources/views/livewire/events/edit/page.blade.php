@@ -79,7 +79,7 @@ new class extends Component {
         $this->event_end_date = $this->event->end_date?->format('Y-m-d') ?? '';
         $this->close_rsvp_at = $this->event->rsvp_closes_at?->format('Y-m-d') ?? '';
 
-        // Load existing sessions with properly formatted times
+        // Load existing sessions with properly formatted times and data
         $this->sessions = $this->event->eventSessions->map(function ($session) {
             return [
                 'id' => $session->id,
@@ -90,6 +90,9 @@ new class extends Component {
                 'start_time' => $session->start_time ? Carbon::parse($session->start_time)->format('H:i') : '',
                 'end_time' => $session->end_time ? Carbon::parse($session->end_time)->format('H:i') : '',
                 'allow_guests' => $session->allow_guests ?? false,
+                'cost' => $session->cost ?? null,
+                'grant' => $session->grant ?? null,
+                'capacity' => $session->capacity ?? null,
             ];
         })->toArray();
 
@@ -140,6 +143,9 @@ new class extends Component {
             'start_time' => '',
             'end_time' => '',
             'allow_guests' => false,
+            'cost' =>  null,
+            'grant' => null,
+            'capacity' => null,
         ];
     }
 
@@ -167,10 +173,22 @@ new class extends Component {
             'sessions.*.start_date' => 'required|date|before_or_equal:event_end_date',
             'sessions.*.start_time' => 'required',
             'sessions.*.end_time' => 'required|after:sessions.*.start_time',
+            'sessions.*.grant' => 'nullable|numeric|regex:/^\d+(\.\d{0,2})?$/',
+            'sessions.*.cost' => 'nullable|numeric|regex:/^\d+(\.\d{0,2})?$/',
+            'sessions.*.capacity' => 'nullable|numeric',
         ];
     }
 
-    public function update(): Redirector
+    private function convertToFloat($value): ?float
+    {
+        if (empty($value)) {
+            return null;
+        }
+        return (float) $value;
+    }
+
+
+    public function update()
     {
         try {
             Log::info('Update method called', [
@@ -184,7 +202,7 @@ new class extends Component {
             // Validate sessions before proceeding
             if (empty($this->sessions)) {
                 $this->addError('sessions', 'At least one session is required.');
-                return redirect()->back();
+                /*return redirect()->back();*/
             }
 
             // Validate all fields
@@ -277,6 +295,9 @@ new class extends Component {
                     'start_time' => $sessionData['start_time'] ?? null,
                     'end_time' => $sessionData['end_time'] ?? null,
                     'allow_guests' => $sessionData['allow_guests'] ?? false,
+                    'cost' => $this->convertToFloat($sessionData['cost'] ?? null),
+                    'grant' => $this->convertToFloat($sessionData['grant'] ?? null),
+                    'capacity' => $sessionData['capacity'] ?? null,
                 ]);
             } else {
                 // Create a new session
@@ -288,6 +309,9 @@ new class extends Component {
                     'start_time' => $sessionData['start_time'] ?? null,
                     'end_time' => $sessionData['end_time'] ?? null,
                     'allow_guests' => $sessionData['allow_guests'] ?? false,
+                    'cost' => $this->convertToFloat($sessionData['cost'] ?? null),
+                    'grant' => $this->convertToFloat($sessionData['grant'] ?? null),
+                    'capacity' => $sessionData['capacity'] ?? null,
                 ]);
             }
         }
@@ -520,8 +544,33 @@ new class extends Component {
                                         </div>
 
                                         <div>
+                                            <flux:field>
+                                                <flux:label badge="optional">Grant</flux:label>
+                                                <flux:input.group>
+                                                    <flux:input.group.prefix>£</flux:input.group.prefix>
+                                                    <flux:input badge="optional" placeholder="e.g. £10.00"
+                                                                wire:model.lazy="sessions.{{ $index }}.grant"/>
+                                                </flux:input.group>
+                                                <flux:error name="grant"/>
+                                            </flux:field>
+                                        </div>
+
+                                        <div>
+                                            <flux:field>
+                                                <flux:label badge="optional">Cost</flux:label>
+                                                <flux:input.group>
+                                                    <flux:input.group.prefix>£</flux:input.group.prefix>
+                                                    <flux:input badge="optional" placeholder="e.g. £10.00"
+                                                                wire:model.lazy="sessions.{{ $index }}.cost"/>
+                                                </flux:input.group>
+                                                <flux:error name="cost"/>
+                                            </flux:field>
+                                        </div>
+
+                                        <div class="md:mt-10">
                                             <flux:checkbox label="Allow guests"
-                                                           wire:model="sessions.{{ $index }}.allow_guests"/>
+                                                           wire:model.lazy="sessions.{{ $index }}.allow_guests"/>
+
                                         </div>
                                     </div>
                                 </flux:card>

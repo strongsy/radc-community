@@ -21,6 +21,8 @@ class EventSession extends Model
         'start_time',
         'end_time',
         'capacity',
+        'cost',
+        'grant',
         'allow_guests',
     ];
 
@@ -29,6 +31,8 @@ class EventSession extends Model
         'start_time' => 'datetime:H:i:s',
         'end_time' => 'datetime:H:i:s',
         'allow_guests' => 'boolean',
+        'cost' => 'float',
+        'grant' => 'float',
     ];
 
     public function event(): BelongsTo

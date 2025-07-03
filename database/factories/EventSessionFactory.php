@@ -26,6 +26,8 @@ class EventSessionFactory extends Factory
             'start_time' => $startTime,
             'end_time' => $endTime,
             'capacity' => $this->faker->numberBetween(10, 100),
+            'cost' => $this->faker->randomFloat(2, min: 0, max: 150),
+            'grant' => $this->faker->randomFloat(2, min: 0, max: 10),
             'allow_guests' => $this->faker->boolean(60),
         ];
     }
