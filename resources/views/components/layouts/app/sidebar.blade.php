@@ -1,40 +1,9 @@
-<?php
-/*//user badges
-use App\Models\Article;
-use App\Models\Email;
-use App\Models\Gallery;
-use App\Models\Post;
-use App\Models\Story;
-use App\Models\User;
-use App\Models\Event;
-
-//user badges
-$activeUsers = User::where('is_active', true)->where('is_blocked', false)->count();
-$blockedUsers = User::where('is_blocked', true)->count();
-$registeredUsers = User::where('is_active', false)->where('is_blocked', false)->count();
-
-//mail  badges
-$receivedMail = Email::count();
-$archivedMail = Email::onlyTrashed()->count();
-
-//event badges
-$activeEvents = Event::count();
-
-//article badges
-$articles = Article::count();
-
-//posts badges
-$posts = Post::where('user_id', 'auth()->id()')->where('is_approved', true)->count();
-
-//stories badges
-$stories = Story::count();*/
-?>
-
-    <!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="{{ str_replace('_', '-', app()->getLocale()) }}" class="dark">
 <head>
     <title>{{ config('app.name') }}</title>
     @fluxAppearance
+    @fluxStyles
     @mediaLibraryStyles
     @include('partials.head')
 </head>

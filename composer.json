@@ -24,8 +24,7 @@
         "spatie/laravel-honeypot": "^4.6",
         "spatie/laravel-medialibrary": "^11.13",
         "spatie/laravel-medialibrary-pro": "^6.0.0",
-        "spatie/laravel-permission": "^6.17",
-        "ylsideas/subscribable-notifications": "^1.7"
+        "spatie/laravel-permission": "^6.17"
     },
     "require-dev": {
         "fakerphp/faker": "^1.23",

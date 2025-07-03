@@ -7,6 +7,7 @@ use App\Models\EventSessionGuest;
 use App\Models\FoodPreference;
 use App\Models\DrinkPreference;
 use App\Models\FoodAllergy;
+use App\Models\User;
 use App\Models\Venue;
 use Carbon\Carbon;
 use Illuminate\Support\Collection;
@@ -36,6 +37,9 @@ new class extends Component {
     // Guest management
     public array $guests = [];
     public bool $showGuestModal = false;
+    public bool $showEditGuestModal = false;
+    public int $editingGuestId = 0;
+
     public int $currentSessionId = 0;
 
     // Guest form data
@@ -45,8 +49,14 @@ new class extends Component {
     public array $guestDrinkPreferences = [];
     public array $guestAllergies = [];
 
+    public int $registrationCount = 0;
+
+    public User $user;
+
     public function mount(int $id): void
     {
+        $this->user = auth()->user();
+
         $this->event = Event::with([
             'title',
             'venue',
@@ -66,6 +76,33 @@ new class extends Component {
         $this->eventSessions = $this->event->eventSessions;
         $this->loadPreferencesAndAllergies();
         $this->loadUserRegistrations();
+
+        $this->debugSessionData();
+    }
+
+    public function debugSessionData(): void
+    {
+        Log::info('=== SESSION DATA DEBUG ===', [
+            'event_id' => $this->event->id,
+            'total_sessions' => $this->eventSessions->count(),
+            'session_details' => $this->eventSessions->map(function ($session, $index) {
+                return [
+                    'index' => $index,
+                    'id' => $session->id,
+                    'name' => $session->name,
+                    'users_count' => $session->eventSessionUsers->count(),
+                    'first_user_id' => $session->eventSessionUsers->first()?->user_id ?? 'none'
+                ];
+            })->toArray(),
+            'selected_sessions' => $this->selectedSessions,
+            'current_user_id' => auth()->id()
+        ]);
+    }
+
+
+    private function isUserRegisteredForSession(User $user, int $eventSessionId): bool
+    {
+        return $user->eventSessions()->where('event_session_id', $eventSessionId)->exists();
     }
 
 
@@ -209,9 +246,18 @@ new class extends Component {
     private function unregisterFromSession(int $sessionId): void
     {
         try {
-            DB::transaction(static function () use ($sessionId) {
-                $userId = auth()->id();
+            $userId = auth()->id();
 
+            if (!$userId) {
+                Flux::toast(
+                    text: 'You must be logged in to unregister',
+                    heading: 'Authentication Required',
+                    variant: 'danger',
+                );
+                return;
+            }
+
+            DB::transaction(static function () use ($sessionId, $userId) {
                 // Remove user registration
                 EventSessionUser::where('user_id', $userId)
                     ->where('event_session_id', $sessionId)
@@ -338,6 +384,154 @@ new class extends Component {
         $this->resetGuestForm();
         $this->showGuestModal = true;
     }
+
+    public function openEditGuestModal(int $sessionId, int $guestId): void
+    {
+        $guest = EventSessionGuest::where('id', $guestId)
+            ->where('user_id', auth()->id())
+            ->with(['foodPreferences', 'drinkPreferences', 'foodAllergies'])
+            ->first();
+
+        if (!$guest) {
+            Flux::toast(
+                text: 'Guest not found',
+                heading: 'Error',
+                variant: 'danger',
+            );
+            return;
+        }
+
+        $this->currentSessionId = $sessionId;
+        $this->editingGuestId = $guestId;
+
+        // Pre-populate form with existing guest data
+        $this->guestName = $guest->name;
+        $this->guestEmail = $guest->email;
+        $this->guestFoodPreferences = $guest->foodPreferences->pluck('id')->toArray();
+        $this->guestDrinkPreferences = $guest->drinkPreferences->pluck('id')->toArray();
+        $this->guestAllergies = $guest->foodAllergies->pluck('id')->toArray();
+
+
+        $this->showEditGuestModal = true;
+    }
+
+    public function updateGuest(): void
+    {
+        $this->validate([
+            'guestName' => 'required|string|max:255',
+            'guestEmail' => 'required|email|max:255',
+        ]);
+
+        try {
+            // Add debugging to see what values we have
+            Log::info('updateGuest called', [
+                'editingGuestId' => $this->editingGuestId,
+                'user_id' => auth()->id(),
+                'guestName' => $this->guestName,
+                'guestEmail' => $this->guestEmail
+            ]);
+
+            // Check if editingGuestId is set
+            if (!$this->editingGuestId) {
+                Flux::toast(
+                    text: 'No guest selected for editing',
+                    heading: 'Error',
+                    variant: 'danger',
+                );
+                return;
+            }
+
+            $guest = EventSessionGuest::where('id', $this->editingGuestId)
+                ->where('user_id', auth()->id())
+                ->first();
+
+            // Add more detailed logging
+            Log::info('Guest query result', [
+                'guest_found' => $guest ? 'yes' : 'no',
+                'guest_id' => $guest?->id,
+                'guest_user_id' => $guest?->user_id,
+                'editingGuestId' => $this->editingGuestId,
+                'auth_user_id' => auth()->id()
+            ]);
+
+
+            if (!$guest) {
+                // Try to find the guest without the user_id constraint to see if it exists
+                $guestExists = EventSessionGuest::where('id', $this->editingGuestId)->first();
+
+                if ($guestExists) {
+                    Log::warning('Guest exists but belongs to different user', [
+                        'guest_id' => $this->editingGuestId,
+                        'guest_user_id' => $guestExists->user_id,
+                        'auth_user_id' => auth()->id()
+                    ]);
+
+                    Flux::toast(
+                        text: 'You are not authorized to edit this guest',
+                        heading: 'Unauthorized',
+                        variant: 'danger',
+                    );
+                } else {
+                    Log::warning('Guest does not exist', [
+                        'guest_id' => $this->editingGuestId
+                    ]);
+
+                    Flux::toast(
+                        text: 'Guest not found',
+                        heading: 'Error',
+                        variant: 'danger',
+                    );
+                }
+                return;
+            }
+
+
+            DB::transaction(function () use ($guest) {
+                // Update guest basic info
+                $guest->update([
+                    'name' => $this->guestName,
+                    'email' => $this->guestEmail,
+                ]);
+
+                // Sync preferences
+                $guest->foodPreferences()->sync($this->guestFoodPreferences ?? []);
+                $guest->drinkPreferences()->sync($this->guestDrinkPreferences ?? []);
+                $guest->foodAllergies()->sync($this->guestAllergies ?? []);
+            });
+
+            $this->refreshEventData();
+            $this->loadUserRegistrations();
+            $this->closeEditGuestModal();
+
+            Flux::toast(
+                text: 'Guest updated successfully',
+                heading: 'Guest Updated',
+                variant: 'success',
+            );
+
+        } catch (Exception $e) {
+            Log::error('Failed to update guest', [
+                'error' => $e->getMessage(),
+                'guest_id' => $this->editingGuestId,
+                'user_id' => auth()->id(),
+            ]);
+
+            Flux::toast(
+                text: 'Failed to update guest',
+                heading: 'Update Failed',
+                variant: 'danger',
+            );
+        }
+    }
+
+    public function closeEditGuestModal(): void
+    {
+        $this->showEditGuestModal = false;
+        $this->editingGuestId = 0;
+        $this->currentSessionId = 0;
+        $this->resetGuestForm();
+    }
+
 
     protected function getFullAddress(Venue $venue): string
     {
@@ -496,7 +690,6 @@ new class extends Component {
     }
 
 
-
     public function exportEventData(): StreamedResponse
     {
         // Check if the user is the event owner
@@ -538,6 +731,9 @@ new class extends Component {
             $this->createSessionSheet($spreadsheet, $session, $event);
         }
 
+        // Create a Costing sheet
+        $this->createCostingSheet($spreadsheet, $event);
+
         // Set the first sheet as active
         $spreadsheet->setActiveSheetIndex(0);
 
@@ -549,11 +745,105 @@ new class extends Component {
 
         $writer = new Xlsx($spreadsheet);
 
-        return response()->streamDownload(function() use ($writer) {
+        return response()->streamDownload(function () use ($writer) {
             $writer->save('php://output');
         }, $filename, [
             'Content-Type' => 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
         ]);
+    }
+
+    private function createCostingSheet(Spreadsheet $spreadsheet, $event): void
+    {
+        $sheet = $spreadsheet->createSheet();
+        $sheet->setTitle('Costing');
+
+        // Sheet header
+        $sheet->setCellValue('A1', 'Event Costing Summary');
+        $sheet->setCellValue('A2', 'Event Name:');
+        $sheet->setCellValue('B2', $event->title->name);
+        $sheet->setCellValue('A3', 'Generated:');
+        $sheet->setCellValue('B3', now()->format('M d, Y g:i A'));
+
+        $row = 5;
+
+        // Add costing headers
+        $sheet->setCellValue('A' . $row, 'Attendee Name');
+        $sheet->setCellValue('B' . $row, 'Email');
+        $sheet->setCellValue('C' . $row, 'Type');
+        $sheet->setCellValue('D' . $row, 'Session');
+        $sheet->setCellValue('E' . $row, 'Date');
+        $sheet->setCellValue('F' . $row, 'Grant Applied');
+        $sheet->setCellValue('G' . $row, 'Cost');
+        $sheet->setCellValue('H' . $row, 'Final Amount');
+        $row++;
+
+        $totalCost = 0;
+        $totalFinalAmount = 0;
+
+        foreach ($event->eventSessions as $session) {
+            // Process registered users (eligible for grants)
+            foreach ($session->eventSessionUsers as $sessionUser) {
+                $user = $sessionUser->user;
+
+                // Assume these fields exist on the event or session model
+                // You may need to adjust these based on your actual database structure
+                $baseCost = $event->cost ?? $session->cost ?? 0;
+                $grantAmount = $event->grant ?? $session->grant ?? 0;
+                $finalAmount = max(0, $baseCost - $grantAmount);
+
+                $sheet->setCellValue('A' . $row, $user->name);
+                $sheet->setCellValue('B' . $row, $user->email);
+                $sheet->setCellValue('C' . $row, 'Registered User');
+                $sheet->setCellValue('D' . $row, $event->title->name);
+                $sheet->setCellValue('E' . $row, $session->start_date->format('M d, Y'));
+                $sheet->setCellValue('F' . $row, $grantAmount > 0 ? 'Yes' : 'No');
+                $sheet->setCellValue('G' . $row, '£' . number_format($baseCost, 2));
+                $sheet->setCellValue('H' . $row, '£' . number_format($finalAmount, 2));
+
+                $totalCost += $baseCost;
+                $totalFinalAmount += $finalAmount;
+                $row++;
+            }
+
+            // Process guests (not eligible for grants)
+            foreach ($session->eventSessionGuests as $guest) {
+                $baseCost = $event->cost ?? $session->cost ?? 0;
+                $finalAmount = $baseCost; // No grant applied to guests
+
+                $sheet->setCellValue('A' . $row, $guest->name);
+                $sheet->setCellValue('B' . $row, $guest->email);
+                $sheet->setCellValue('C' . $row, 'Guest');
+                $sheet->setCellValue('D' . $row, $event->title->name);
+                $sheet->setCellValue('E' . $row, $session->start_date->format('M d, Y'));
+                $sheet->setCellValue('F' . $row, 'No');
+                $sheet->setCellValue('G' . $row, '£' . number_format($baseCost, 2));
+                $sheet->setCellValue('H' . $row, '£' . number_format($finalAmount, 2));
+
+                $totalCost += $baseCost;
+                $totalFinalAmount += $finalAmount;
+                $row++;
+            }
+        }
+
+        // Add totals
+        $row += 2;
+        $sheet->setCellValue('F' . $row, 'Total Cost:');
+        $sheet->setCellValue('G' . $row, '£' . number_format($totalCost, 2));
+        $sheet->setCellValue('H' . $row, '£' . number_format($totalFinalAmount, 2));
+
+        $row++;
+        $sheet->setCellValue('F' . $row, 'Total Grant Applied:');
+        $sheet->setCellValue('G' . $row, '£' . number_format($totalCost - $totalFinalAmount, 2));
+
+        // Style the headers
+        $sheet->getStyle('A1')->getFont()->setBold(true)->setSize(16);
+        $sheet->getStyle('A5:H5')->getFont()->setBold(true);
+        $sheet->getStyle('F' . ($row - 1) . ':H' . $row)->getFont()->setBold(true);
+
+        // Auto-size columns
+        foreach (range('A', 'H') as $column) {
+            $sheet->getColumnDimension($column)->setAutoSize(true);
+        }
     }
 
 
@@ -737,9 +1027,28 @@ new class extends Component {
 {{-- *******Blade component starts here******* --}}
 <div
     class="flex flex-col mx-auto max-w-7xl translate-y-0 starting:translate-y-6 object-cover starting:opacity-0 opacity-100 transition-all duration-750 space-y-6">
-
     {{-- *******Event name******* --}}
-    <flux:heading size="xl" class="mb-6">{{ $event->title->name }}</flux:heading>
+    <div class="md:flex md:items-center md:justify-between">
+        <div class="flex-1 min-w-0">
+            <flux:heading size="xl">{{ $event->title->name }}</flux:heading>
+        </div>
+
+        <div>
+            {{-- Add this after the event description, before the separator --}}
+            @if(auth()->check() && auth()->id() === $event->user_id)
+                <div>
+                    <flux:button
+                        wire:click="exportEventData"
+                        variant="filled"
+                        icon="arrow-down-tray"
+                        size="sm"
+                    >
+                        Export
+                    </flux:button>
+                </div>
+            @endif
+        </div>
+    </div>
 
     {{-- *******Event card layout******* --}}
     <flux:card>
@@ -836,22 +1145,6 @@ new class extends Component {
             </div>
         </div>
 
-        <div>
-            {{-- Add this after the event description, before the separator --}}
-            @if(auth()->check() && auth()->id() === $event->user_id)
-                <div class="mt-6">
-                    <flux:button
-                        wire:click="exportEventData"
-                        variant="filled"
-                        icon="arrow-down-tray"
-                        size="sm"
-                    >
-                        Download Registration Data
-                    </flux:button>
-                </div>
-            @endif
-        </div>
-
         <div class="my-4">
             <flux:separator variant="subtle"/>
         </div>
@@ -859,7 +1152,7 @@ new class extends Component {
         <div>
             <flux:accordion transition>
                 <flux:accordion.item>
-                    <flux:accordion.heading>Event Details</flux:accordion.heading>
+                    <flux:accordion.heading size="lg">Event Details</flux:accordion.heading>
                     <flux:accordion.content>
                         <flux:text class="prose max-w-none text-sm">
                             {!! $event->description !!}
@@ -868,286 +1161,305 @@ new class extends Component {
                 </flux:accordion.item>
             </flux:accordion>
         </div>
-    </flux:card>
 
-    {{-- *********Sessions container starts here******* --}}
-    <div class="mt-10">
-        <flux:heading size="lg">Event Sessions</flux:heading>
-    </div>
+        <div class="my-4">
+            <flux:separator/>
+        </div>
 
-    {{-- *******Session cards start here******* --}}
-    @forelse($eventSessions as $session)
-        <flux:card class="space-y-6">
-            <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
-                <div class="flex flex-col lg:flex-row lg:items-start lg:justify-between mb-4">
-                    <div class="flex-1 space-y-4">
-                        <div>
-                            <flux:heading size="sm">Name</flux:heading>
-                            <flux:text size="sm">{{ $event->title->name }}</flux:text>
+        <div class="my-5">
+            <flux:heading size="lg">Event Sessions</flux:heading>
+        </div>
+
+        {{-- **********Event Sessions********** --}}
+        <div class="grid grid-cols-1 space-y-4 justify-between">
+            @forelse($eventSessions as $session)
+                <flux:card class="space-y-4">
+                    <div class="grid grid-cols-1 md:grid-cols-3">
+                        <div class="grid grid-cols-1 space-y-4">
+                            <div>
+                                <flux:badge size="sm" color="amber" variant="solid">
+                                    Session {{ $session->id }}
+                                </flux:badge>
+                            </div>
+
+                            <div class="flex-1 space-y-4">
+                                <div>
+                                    <flux:heading size="sm">Name</flux:heading>
+                                    <flux:text size="sm">{{ $event->title->name }}</flux:text>
+                                </div>
+
+                                <div>
+                                    <div class="flex items-center gap-2">
+                                        <flux:icon.calendar class="w-4 h-4 text-zinc-700 dark:text-zinc-400"/>
+                                        <flux:heading size="sm" class="font-medium">Date</flux:heading>
+                                        <flux:text size="sm">{{ $session->start_date->format('D d M Y') }}</flux:text>
+                                    </div>
+                                </div>
+
+                                <div>
+                                    <div class="flex items-center gap-2">
+                                        <flux:icon.clock class="w-4 h-4 text-zinc-700 dark:text-zinc-400"/>
+                                        <flux:heading size="sm" class="font-medium">Timings</flux:heading>
+                                        <flux:text size="sm">
+                                            {{ Carbon::parse($session->start_time)->format('g:i A') }} -
+                                            {{ Carbon::parse($session->end_time)->format('g:i A') }}
+                                        </flux:text>
+                                    </div>
+                                </div>
+
+                                <div>
+                                    <div class="flex items-center gap-2">
+                                        <flux:icon.map-pin class="w-4 h-4 text-zinc-700 dark:text-zinc-400"/>
+                                        <flux:heading size="sm" class="font-medium">Venue</flux:heading>
+                                        <flux:text size="sm">{{ $session->location }}</flux:text>
+                                    </div>
+                                </div>
+                            </div>
                         </div>
                     </div>
-                </div>
 
-                <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
-                    <div class="flex items-center">
-                        <flux:icon.calendar class="mr-2 w-4 h-4"/>
-                        <div>
-                            <flux:heading size="sm" class="font-medium">Date</flux:heading>
-                            <flux:text size="sm">{{ $session->start_date->format('D d M Y') }}</flux:text>
-                        </div>
-
+                    <div class="grid grid-cols-1 my-4">
+                        <flux:separator variant="subtle"/>
                     </div>
 
-                    <div class="flex items-center">
-                        <flux:icon.clock class="mr-2 w-4 h-4 "/>
-                        <div>
-                            <flux:heading size="sm" class="font-medium">Timings</flux:heading>
-                            <flux:text size="sm">
-                                {{ Carbon::parse($session->start_time)->format('g:i A') }} -
-                                {{ Carbon::parse($session->end_time)->format('g:i A') }}
-                            </flux:text>
-                        </div>
-
+                    <div class="grid grid-cols-1">
+                        <flux:heading size="sm" class="font-medium">Description</flux:heading>
+                        <flux:text size="sm">{{ $session->description }}</flux:text>
                     </div>
 
-                    <div class="flex items-center">
-                        <flux:icon.map-pin class="mr-2 w-4 h-4"/>
-                        <div>
-                            <flux:heading size="sm" class="font-medium">Venue</flux:heading>
-                            <flux:text size="sm">{{ $session->location }}</flux:text>
-                        </div>
-                    </div>
-                </div>
+                    {{-- **********Member register area********** --}}
+                    @auth
+                        <div class="grid grid-cols-1 justify-end gap-4">
+                            @if($event->rsvp_closes_at->isFuture())
+                                <div class="flex flex-row items-center justify-end gap-4">
+                                    <div>
+                                        @if($this->canAddGuests($session->id))
+                                            @php
+                                                $currentGuestCount = isset($guests[$session->id]) ? count($guests[$session->id]) : 0;
+                                            @endphp
+                                            <flux:button
+                                                wire:click="openGuestModal({{ $session->id }})"
+                                                variant="filled"
+                                                icon="user-plus"
+                                                size="sm"
+                                                :disabled="!$this->canAddGuests($session->id) || $currentGuestCount >= 2"
+                                            >
+                                                Add
+                                                Guest {{ $currentGuestCount >= 2 ? '(Limit: 2)' : "($currentGuestCount/2)" }}
+                                            </flux:button>
+                                        @endif
+                                    </div>
 
-                <div class="flex items-center justify-end gap-4 mb-4">
-                    @php
-                        $registrationCount = $this->getSessionRegistrationCount($session->id);
-                    @endphp
-
-                    <flux:badge size="sm" icon="users" color="blue">
-                        {{ $registrationCount }}{{ $session->capacity ? "/$session->capacity" : '' }}
-                        registered
-                    </flux:badge>
-
-                    @if($session->allow_guests)
-                        <flux:badge size="sm" icon="user-plus" color="green">Guests allowed</flux:badge>
-                    @endif
-
-                    @if($session->capacity && $registrationCount >= $session->capacity)
-                        <flux:badge size="sm" icon="exclamation-triangle" color="red">Full</flux:badge>
-                    @endif
-                </div>
-            </div>
-
-            <div class="grid grid-cols-1 my-6">
-                <flux:heading size="sm" class="font-medium">Description</flux:heading>
-                <flux:text size="sm">{{ $session->description }}</flux:text>
-            </div>
-
-            {{-- ********Costings******** --}}
-            <div class="grid grid-cols-1 my-6">
-                <div>
-                    @if($session['grant'])
-                        <flux:text size="sm">
-                            A grant of £{{ $session['grant'] }} is available to members. {{ $session['grant_count'] }}
-                        </flux:text>
-                    @endif
-                </div>
-
-                <div>
-                    @if($session['cost'])
-                        <flux:text size="sm">
-                            Cost to members £{{ $session['cost'] - $session['grant'] }}
-                        </flux:text>
-
-                        <flux:text size="sm">
-                            Cost to guests £{{ $session['cost'] }}
-                        </flux:text>
-                    @endif
-                </div>
-
-            </div>
-
-            @auth
-                <div class="grid grid-cols-1 justify-end gap-4">
-                    @if($event->rsvp_closes_at->isFuture())
-                        <div class="flex items-center justify-end gap-4">
-                            <flux:button
-                                wire:click="toggleSessionRegistration({{ $session->id }})"
-                                variant="{{ $this->isRegisteredForSession($session->id) ? 'danger' : 'primary' }}"
-                                icon="{{ $this->isRegisteredForSession($session->id) ? 'x-mark' : 'check' }}"
-                                size="sm"
-                                :disabled="!$this->isRegisteredForSession($session->id) && $session->capacity && $registrationCount >= $session->capacity"
-                            >
-                                {{ $this->isRegisteredForSession($session->id) ? 'Unregister' : 'Register' }}
-                            </flux:button>
-                        </div>
-
-
-                        <div class="flex items-center justify-end gap-4">
-                            @if($this->canAddGuests($session->id))
-                                @php
-                                    $currentGuestCount = isset($guests[$session->id]) ? count($guests[$session->id]) : 0;
-                                @endphp
-                                <flux:button
-                                    wire:click="openGuestModal({{ $session->id }})"
-                                    variant="filled"
-                                    icon="user-plus"
-                                    size="sm"
-                                    :disabled="!$this->canAddGuests($session->id) || $currentGuestCount >= 2"
-                                >
-                                    Add Guest {{ $currentGuestCount >= 2 ? '(Limit: 2)' : "($currentGuestCount/2)" }}
-                                </flux:button>
+                                    <div>
+                                        <flux:button
+                                            wire:click="toggleSessionRegistration({{ $session->id }})"
+                                            variant="{{ $this->isRegisteredForSession($session->id) ? 'danger' : 'primary' }}"
+                                            icon="{{ $this->isRegisteredForSession($session->id) ? 'x-mark' : 'check' }}"
+                                            size="sm"
+                                            :disabled="!$this->isRegisteredForSession($session->id) && $session->capacity && $registrationCount >= $session->capacity"
+                                        >
+                                            {{ $this->isRegisteredForSession($session->id) ? 'Unregister' : 'Register' }}
+                                        </flux:button>
+                                    </div>
+                                </div>
+                            @else
+                                <flux:text size="sm" class="text-red-600">RSVP Closed</flux:text>
                             @endif
                         </div>
                     @else
-                        <flux:text size="sm" class="text-red-600">RSVP Closed</flux:text>
-                    @endif
-                </div>
-            @else
-                <div class="lg:ml-6">
-                    <flux:button href="{{ route('login') }}" variant="primary" size="sm">
-                        Login to Register
-                    </flux:button>
-                </div>
-            @endauth
+                        <div class="lg:ml-6">
+                            <flux:button href="{{ route('login') }}" variant="primary" size="sm">
+                                Login to Register
+                            </flux:button>
+                        </div>
+                    @endauth
 
+                    {{-- Only show if user is registered --}}
+                    @if($this->isUserRegisteredForSession(auth()->user(), $session->id))
+                        <div class="flex items-center justify-end gap-4 mb-4">
+                            @php
+                                $registrationCount = $this->getSessionRegistrationCount($session->id);
+                            @endphp
 
-            <div class="grid grid-cols-1">
-                <flux:accordion transition>
-                    <flux:accordion.item>
-                        <flux:accordion.heading>Your preferences</flux:accordion.heading>
-                        <flux:accordion.content>
-                            <flux:text size="sm" class="text-sm">
-                                If this session includes catering, please select from the option below if any apply
-                                to you.
-                                If you have any other preferences, please let us know.
-                            </flux:text>
-                            <div class="grid grid-cols-1 lg:grid-cols-3 justify-between gap-4 mt-4">
-                                <div>
-                                    <flux:card>
-                                        <flux:checkbox.group>
-                                            <flux:text size="sm" class="font-medium mb-2">Food Preferences
-                                            </flux:text>
-                                            <div class="space-y-1">
-                                                @foreach($foodPreferences as $preference)
-                                                    <flux:checkbox
-                                                        label="{{ $preference->name }}"
-                                                        wire:model.lazy="userPreferences.{{ $session->id }}"
-                                                        wire:change="updateUserPreferences({{ $session->id }})"
-                                                        value="{{ $preference->id }}"
-                                                    />
-                                                @endforeach
-                                            </div>
-                                        </flux:checkbox.group>
-                                    </flux:card>
-                                </div>
+                            <flux:badge size="sm" icon="users" color="blue">
+                                {{ $registrationCount }}{{ $session->capacity ? "/$session->capacity" : '' }}
+                                registered
+                            </flux:badge>
 
-                                <div>
-                                    <flux:card>
-                                        <flux:checkbox.group>
-                                            <flux:text size="sm" class="font-medium mb-2">Drink Preferences
-                                            </flux:text>
-                                            <div class="space-y-1">
-                                                @foreach($drinkPreferences as $drink)
-                                                    <flux:checkbox
-                                                        label="{{ $drink->name }}"
-                                                        wire:model.lazy="userDrinks.{{ $session->id }}"
-                                                        wire:change="updateUserPreferences({{ $session->id }})"
-                                                        value="{{ $drink->id }}"
-                                                    />
-                                                @endforeach
-                                            </div>
-                                        </flux:checkbox.group>
-                                    </flux:card>
-                                </div>
-
-                                <div>
-                                    <flux:card>
-                                        <flux:checkbox.group>
-                                            <flux:text size="sm" class="font-medium mb-2">Food Allergies</flux:text>
-                                            <div class="space-y-1">
-                                                @foreach($foodAllergies as $allergy)
-                                                    <flux:checkbox
-                                                        label="{{ $allergy->name }}"
-                                                        wire:model.lazy="userAllergies.{{ $session->id }}"
-                                                        wire:change="updateUserPreferences({{ $session->id }})"
-                                                        value="{{ $allergy->id }}"
-                                                    />
-                                                @endforeach
-                                            </div>
-                                        </flux:checkbox.group>
-                                    </flux:card>
-                                </div>
-
-                            </div>
-
-                        </flux:accordion.content>
-                    </flux:accordion.item>
-
-                    <flux:accordion.item>
-                        <flux:accordion.heading>Registered Users</flux:accordion.heading>
-                        <flux:accordion.content>
-                            @if($session->eventSessionUsers->count() > 0)
-                                <div>
-                                    <div class="flex flex-wrap gap-2">
-                                        @foreach($session->eventSessionUsers as $sessionUser)
-                                            <flux:badge size="sm"
-                                                        icon="user">{{ $sessionUser->user->name }}</flux:badge>
-                                        @endforeach
-                                    </div>
-                                </div>
+                            @if($session->allow_guests)
+                                <flux:badge size="sm" icon="user-plus" color="green">Guests allowed</flux:badge>
                             @endif
-                        </flux:accordion.content>
-                    </flux:accordion.item>
 
-                    @if($session->allow_guests)
-                        <flux:accordion.item>
-                            <flux:accordion.heading>Guests</flux:accordion.heading>
-                            <flux:accordion.content>
-                                <div>
-                                    <!-- Guests List -->
-                                    @if(isset($guests[$session->id]) && count($guests[$session->id]) > 0)
-                                        <div>
-                                            <flux:separator variant="subtle" class="my-4"/>
-                                            <flux:heading class="mb-3">Your Guests</flux:heading>
-                                            <div class="space-y-4">
-                                                @foreach($guests[$session->id] as $guest)
-                                                    <flux:card
-                                                        class="flex items-center justify-between p-3 bg-zinc-50 rounded-lg">
-                                                        <div>
-                                                            <flux:text
-                                                                class="font-medium">{{ $guest['name'] }}</flux:text>
-                                                            <flux:link size="sm"
-                                                                       href="mailto:{{ $guest['email'] }}">{{ $guest['email'] }}</flux:link>
+                            @if($session->capacity && $registrationCount >= $session->capacity)
+                                <flux:badge size="sm" icon="exclamation-triangle" color="red">Full</flux:badge>
+                            @endif
+                        </div>
+
+                        {{-- ********Costings******** --}}
+                        <div class="grid grid-cols-1 my-6">
+                            <div>
+                                @if($session['cost'])
+                                    <flux:text>
+                                        Cost to members £{{ $session['cost'] - $session['grant'] }}
+                                    </flux:text>
+
+                                    <flux:text>
+                                        Cost to guests £{{ $session['cost'] }}
+                                    </flux:text>
+                                @endif
+                            </div>
+                        </div>
+
+
+                        <div class="grid grid-cols-1">
+                            <flux:accordion transition>
+                                <flux:accordion.item>
+                                    <flux:accordion.heading>Your preferences</flux:accordion.heading>
+                                    <flux:accordion.content>
+                                        <flux:text size="sm" class="text-sm">
+                                            If this session includes catering, please select from the option below if
+                                            any
+                                            apply
+                                            to you.
+                                            If you have any other preferences, please let us know.
+                                        </flux:text>
+                                        <div class="grid grid-cols-1 lg:grid-cols-3 justify-between gap-4 mt-4">
+                                            <div>
+                                                <flux:card>
+                                                    <flux:checkbox.group>
+                                                        <flux:text size="sm" class="font-medium mb-2">Food Preferences
+                                                        </flux:text>
+                                                        <div class="space-y-1">
+                                                            @foreach($foodPreferences as $preference)
+                                                                <flux:checkbox
+                                                                    label="{{ $preference->name }}"
+                                                                    wire:model.lazy="userPreferences.{{ $session->id }}"
+                                                                    wire:change="updateUserPreferences({{ $session->id }})"
+                                                                    value="{{ $preference->id }}"
+                                                                />
+                                                            @endforeach
                                                         </div>
-                                                        <flux:button
-                                                            wire:click="removeGuest({{ $session->id }}, {{ $guest['id'] }})"
-                                                            variant="danger"
-                                                            size="xs"
-                                                            icon="trash"
-                                                        >
-                                                            Remove
-                                                        </flux:button>
-                                                    </flux:card>
-                                                @endforeach
+                                                    </flux:checkbox.group>
+                                                </flux:card>
                                             </div>
-                                        </div>
-                                    @endif
-                                </div>
-                            </flux:accordion.content>
-                        </flux:accordion.item>
-                    @endif
-                </flux:accordion>
-            </div>
 
-        </flux:card>
-    @empty
-        <div class="text-center py-8">
-            <flux:icon name="calendar" class="w-12 h-12 mx-auto text-zinc-400 mb-4"/>
-            <flux:text>No sessions available for this event.</flux:text>
+                                            <div>
+                                                <flux:card>
+                                                    <flux:checkbox.group>
+                                                        <flux:text size="sm" class="font-medium mb-2">Drink Preferences
+                                                        </flux:text>
+                                                        <div class="space-y-1">
+                                                            @foreach($drinkPreferences as $drink)
+                                                                <flux:checkbox
+                                                                    label="{{ $drink->name }}"
+                                                                    wire:model.lazy="userDrinks.{{ $session->id }}"
+                                                                    wire:change="updateUserPreferences({{ $session->id }})"
+                                                                    value="{{ $drink->id }}"
+                                                                />
+                                                            @endforeach
+                                                        </div>
+                                                    </flux:checkbox.group>
+                                                </flux:card>
+                                            </div>
+
+                                            <div>
+                                                <flux:card>
+                                                    <flux:checkbox.group>
+                                                        <flux:text size="sm" class="font-medium mb-2">Food Allergies
+                                                        </flux:text>
+                                                        <div class="space-y-1">
+                                                            @foreach($foodAllergies as $allergy)
+                                                                <flux:checkbox
+                                                                    label="{{ $allergy->name }}"
+                                                                    wire:model.lazy="userAllergies.{{ $session->id }}"
+                                                                    wire:change="updateUserPreferences({{ $session->id }})"
+                                                                    value="{{ $allergy->id }}"
+                                                                />
+                                                            @endforeach
+                                                        </div>
+                                                    </flux:checkbox.group>
+                                                </flux:card>
+                                            </div>
+
+                                        </div>
+
+                                    </flux:accordion.content>
+                                </flux:accordion.item>
+
+                                <flux:accordion.item>
+                                    <flux:accordion.heading>Registered Users</flux:accordion.heading>
+                                    <flux:accordion.content>
+                                        @if($session->eventSessionUsers->count() > 0)
+                                            <div>
+                                                <div class="flex flex-wrap gap-2">
+                                                    @foreach($session->eventSessionUsers as $sessionUser)
+                                                        <flux:badge size="sm"
+                                                                    icon="user">{{ $sessionUser->user->name }}</flux:badge>
+                                                    @endforeach
+                                                </div>
+                                            </div>
+                                        @endif
+                                    </flux:accordion.content>
+                                </flux:accordion.item>
+
+                                @if($session->allow_guests)
+                                    <flux:accordion.item>
+                                        <flux:accordion.heading>Guests</flux:accordion.heading>
+                                        <flux:accordion.content>
+                                            <div>
+                                                <!-- Guests List -->
+                                                @if(isset($guests[$session->id]) && count($guests[$session->id]) > 0)
+                                                    <div>
+                                                        <flux:separator variant="subtle" class="my-4"/>
+                                                        <flux:heading class="mb-3">Your Guests</flux:heading>
+                                                        <div class="space-y-4">
+                                                            @if(isset($guests[$session->id]))
+                                                                @foreach($guests[$session->id] as $guest)
+                                                                    <flux:card
+                                                                        class="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
+                                                                        <div>
+                                                                            <flux:text
+                                                                                size="md">{{ $guest['name'] }}</flux:text>
+                                                                            <flux:link
+                                                                                href="mailto:{{ $guest['email'] }}">{{ $guest['email'] }}</flux:link>
+                                                                        </div>
+                                                                        <div class="flex space-x-2">
+                                                                            <flux:button variant="filled" size="sm"
+                                                                                         color="teal"
+                                                                                         wire:click="openEditGuestModal({{ $session->id }}, {{ $guest['id'] }})"
+                                                                            >
+                                                                                Edit
+                                                                            </flux:button>
+                                                                            <flux:button variant="danger" size="sm"
+                                                                                         wire:click="removeGuest({{ $session->id }}, {{ $guest['id'] }})"
+                                                                            >
+                                                                                Remove
+                                                                            </flux:button>
+                                                                        </div>
+                                                                    </flux:card>
+                                                                @endforeach
+                                                            @endif
+
+                                                        </div>
+                                                    </div>
+                                                @endif
+                                            </div>
+                                        </flux:accordion.content>
+                                    </flux:accordion.item>
+                                @endif
+                            </flux:accordion>
+                        </div>
+                    @endif
+                </flux:card>
+            @empty
+                <div class="text-center py-8">
+                    <flux:icon name="calendar" class="w-12 h-12 mx-auto text-zinc-400 mb-4"/>
+                    <flux:text>No sessions available for this event.</flux:text>
+                </div>
+            @endforelse
         </div>
-    @endforelse
+
+    </flux:card>
 
     <!-- Guest Modal -->
     @if($showGuestModal)
@@ -1225,6 +1537,91 @@ new class extends Component {
             </form>
         </flux:modal>
     @endif
+
+    <!-- Edit Guest Modal -->
+    <form wire:click="updateGuest">
+        <flux:modal name="edit-guest-modal" wire:model="showEditGuestModal">
+            <div class="p-6">
+                <h2 class="text-lg font-medium mb-4">Edit Guest</h2>
+
+                <div class="space-y-4">
+                    <div>
+                        <flux:field>
+                            <flux:label>Guest Name</flux:label>
+                            <flux:input wire:model="guestName" placeholder="Enter guest name"/>
+                            <flux:error name="guestName"/>
+                        </flux:field>
+                    </div>
+
+                    <div>
+                        <flux:field>
+                            <flux:label>Guest Email</flux:label>
+                            <flux:input wire:model="guestEmail" type="email" placeholder="Enter guest email"/>
+                            <flux:error name="guestEmail"/>
+                        </flux:field>
+                    </div>
+
+                    <div>
+                        <flux:field>
+                            <flux:label>Food Preferences</flux:label>
+                            <div class="grid grid-cols-2 gap-2">
+                                @foreach($foodPreferences as $preference)
+                                    <flux:checkbox
+                                        wire:model="guestFoodPreferences"
+                                        value="{{ $preference->id }}"
+                                    >
+                                        {{ $preference->name }}
+                                    </flux:checkbox>
+                                @endforeach
+                            </div>
+                        </flux:field>
+                    </div>
+
+                    <div>
+                        <flux:field>
+                            <flux:label>Drink Preferences</flux:label>
+                            <div class="grid grid-cols-2 gap-2">
+                                @foreach($drinkPreferences as $preference)
+                                    <flux:checkbox
+                                        wire:model="guestDrinkPreferences"
+                                        value="{{ $preference->id }}"
+                                    >
+                                        {{ $preference->name }}
+                                    </flux:checkbox>
+                                @endforeach
+                            </div>
+                        </flux:field>
+                    </div>
+
+                    <div>
+                        <flux:field>
+                            <flux:label>Food Allergies</flux:label>
+                            <div class="grid grid-cols-2 gap-2">
+                                @foreach($foodAllergies as $allergy)
+                                    <flux:checkbox
+                                        wire:model="guestAllergies"
+                                        value="{{ $allergy->id }}"
+                                    >
+                                        {{ $allergy->name }}
+                                    </flux:checkbox>
+                                @endforeach
+                            </div>
+                        </flux:field>
+                    </div>
+                </div>
+
+                <div class="flex justify-end space-x-3 mt-6">
+                    <flux:button variant="ghost" wire:click="closeEditGuestModal">
+                        Cancel
+                    </flux:button>
+                    <flux:button type="submit">
+                        Update Guest
+                    </flux:button>
+                </div>
+            </div>
+        </flux:modal>
+    </form>
+
 
     <!-- Back Button -->
     <div class="flex justify-start">

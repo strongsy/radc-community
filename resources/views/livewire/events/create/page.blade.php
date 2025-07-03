@@ -518,6 +518,7 @@ new class extends Component {
                 <div class="grid grid-cols-1 col-span-full my-6">
                     <flux:separator class="h-2"/>
                 </div>
+
                 {{-- Event Sessions --}}
                 <div>
                     <div class="grid grid-cols-1">
