@@ -177,9 +177,10 @@ new class extends Component {
     }
 }; ?>
 
-<div class="flex  flex-col translate-y-0 starting:translate-y-6 object-cover starting:opacity-0 opacity-100 transition-all duration-750">
+<div
+    class="flex flex-col mx-auto max-w-7xl gap-4 translate-y-0 starting:translate-y-6 object-cover starting:opacity-0 opacity-100 transition-all duration-750">
     <!-- Header -->
-    <flux:card class="md:flex md:items-center md:justify-between mb-8">
+    <div class="md:flex md:items-center md:justify-between">
         <div class="flex-1 min-w-0">
             <flux:heading size="xl">
                 Community Events
@@ -191,119 +192,129 @@ new class extends Component {
         <div class="mt-4 flex md:mt-0 md:ml-4">
             <flux:button icon="plus" variant="danger" href="{{ route('events.create') }}">Create Event</flux:button>
         </div>
-    </flux:card>
+    </div>
 
     <!-- Stats -->
-    <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
-        <flux:card>
-            <div class="p-5">
-                <div class="flex items-center">
-                    <div class="flex-shrink-0">
-                        <flux:icon name="calendar"/>
-                    </div>
-                    <div class="ml-5 w-0 flex-1">
-                        <div>
-                            <flux:heading size="sm">Total Events</flux:heading>
-                            <flux:heading size="xl">{{ $totalEvents }}</flux:heading>
+    <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+        <div>
+            <flux:card>
+                <div class="p-5">
+                    <div class="flex items-center">
+                        <div class="flex-shrink-0">
+                            <flux:icon name="calendar" class="text-zinc-700 dark:text-zinc-400"/>
+                        </div>
+                        <div class="ml-5 w-0 flex-1">
+                            <div>
+                                <flux:heading size="lg">Total Events</flux:heading>
+                                <flux:heading size="xl">{{ $totalEvents }}</flux:heading>
+                            </div>
                         </div>
                     </div>
                 </div>
-            </div>
-        </flux:card>
+            </flux:card>
+        </div>
 
-        <flux:card>
-            <div class="p-5">
-                <div class="flex items-center">
-                    <div class="flex-shrink-0">
-                        <flux:icon name="user"/>
-                    </div>
-                    <div class="ml-5 w-0 flex-1">
-                        <div>
-                            <flux:heading size="sm">My Events</flux:heading>
-                            <flux:heading size="xl">{{ $myEvents }}</flux:heading>
+        <div>
+            <flux:card>
+                <div class="p-5">
+                    <div class="flex items-center">
+                        <div class="flex-shrink-0">
+                            <flux:icon name="user" class="text-zinc-700 dark:text-zinc-400"/>
+                        </div>
+                        <div class="ml-5 w-0 flex-1">
+                            <div>
+                                <flux:heading size="lg">My Events</flux:heading>
+                                <flux:heading size="xl">{{ $myEvents }}</flux:heading>
+                            </div>
                         </div>
                     </div>
                 </div>
-            </div>
-        </flux:card>
+            </flux:card>
+        </div>
 
-        <flux:card>
-            <div class="p-5">
-                <div class="flex items-center">
-                    <div class="flex-shrink-0">
-                        <flux:icon name="clock"/>
-                    </div>
-                    <div class="ml-5 w-0 flex-1">
-                        <div>
-                            <flux:heading size="sm">Upcoming Events</flux:heading>
-                            <flux:heading
-                                size="xl">{{ Event::where('start_date', '>=', now())->count() }}</flux:heading>
+        <div>
+            <flux:card>
+                <div class="p-5">
+                    <div class="flex items-center">
+                        <div class="flex-shrink-0">
+                            <flux:icon name="clock" class="text-zinc-700 dark:text-zinc-400"/>
+                        </div>
+                        <div class="ml-5 w-0 flex-1">
+                            <div>
+                                <flux:heading size="lg">Upcoming Events</flux:heading>
+                                <flux:heading
+                                    size="xl">{{ Event::where('start_date', '>=', now())->count() }}</flux:heading>
+                            </div>
                         </div>
                     </div>
+                </div>
+            </flux:card>
+        </div>
+
+    </div>
+
+    <!-- Filters -->
+    <div>
+        <flux:card class="flex flex-col gap-4">
+            <div>
+                <flux:heading size="lg">Filters</flux:heading>
+            </div>
+            <div>
+                <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 space-y-4">
+                    <!-- Search -->
+                    <div class="space-y-3">
+                        <flux:input type="text" label="Search" icon="magnifying-glass"
+                                    placeholder="Search events, venues..." wire:model.live.debounce.300ms="search"/>
+                    </div>
+
+                    <!-- Categories -->
+                    <div>
+                        <flux:select searchable label="Categories" placeholder="Select categories..."
+                                     wire:model.lazy="selectedCategories">
+                            <option value="">All Categories</option>
+                            @foreach($categories as $category)
+                                <option value="{{ $category->id }}">{{ $category->name }}</option>
+                            @endforeach
+                        </flux:select>
+                    </div>
+
+                    <!-- Venue -->
+                    <div>
+                        <flux:select searchable label="Venue" placeholder="Select venue..." wire:model.lazy="selectedVenue">
+                            <option value="">All Venues</option>
+                            @foreach($venues as $venue)
+                                <option value="{{ $venue->id }}">{{ $venue->name }}</option>
+                            @endforeach
+                        </flux:select>
+                    </div>
+
+                    <!-- Date Filter -->
+                    <div>
+                        <flux:select label="Date" placeholder="Select date..." wire:model.lazy="dateFilter">
+                            <option value="">All Dates</option>
+                            <option value="today">Today</option>
+                            <option value="tomorrow">Tomorrow</option>
+                            <option value="this_week">This Week</option>
+                            <option value="this_month">This Month</option>
+                            <option value="upcoming">Upcoming</option>
+                            <option value="past">Past Events</option>
+                        </flux:select>
+                    </div>
+                </div>
+
+                <div class="flex flex-wrap items-center gap-4">
+                    <flux:checkbox label="Show my events only" wire:model.lazy="myEventsOnly"/>
+                    <flux:button icon="x-mark" variant="primary" size="sm" wire:click="clearFilters">Clear All
+                        Filters
+                    </flux:button>
                 </div>
             </div>
         </flux:card>
     </div>
 
-    <!-- Filters -->
-    <flux:card>
-        <div>
-            <flux:heading size="sm">Filters</flux:heading>
-        </div>
-        <div class="p-6">
-            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-                <!-- Search -->
-                <div class="space-y-3">
-                    <flux:input type="text" label="Search" icon="magnifying-glass"
-                                placeholder="Search events, venues..." wire:model.live.debounce.300ms="search"/>
-                </div>
-
-                <!-- Categories -->
-                <div>
-                    <flux:select searchable label="Categories" placeholder="Select categories..."
-                                 wire:model.lazy="selectedCategories">
-                        <option value="">All Categories</option>
-                        @foreach($categories as $category)
-                            <option value="{{ $category->id }}">{{ $category->name }}</option>
-                        @endforeach
-                    </flux:select>
-                </div>
-
-                <!-- Venue -->
-                <div>
-                    <flux:select searchable label="Venue" placeholder="Select venue..." wire:model.lazy="selectedVenue">
-                        <option value="">All Venues</option>
-                        @foreach($venues as $venue)
-                            <option value="{{ $venue->id }}">{{ $venue->name }}</option>
-                        @endforeach
-                    </flux:select>
-                </div>
-
-                <!-- Date Filter -->
-                <div>
-                    <flux:select label="Date" placeholder="Select date..." wire:model.lazy="dateFilter">
-                        <option value="">All Dates</option>
-                        <option value="today">Today</option>
-                        <option value="tomorrow">Tomorrow</option>
-                        <option value="this_week">This Week</option>
-                        <option value="this_month">This Month</option>
-                        <option value="upcoming">Upcoming</option>
-                        <option value="past">Past Events</option>
-                    </flux:select>
-                </div>
-            </div>
-
-            <div class="mt-4 flex flex-wrap items-center gap-4">
-                <flux:checkbox label="Show my events only" wire:model.lazy="myEventsOnly"/>
-                <flux:button icon="x-mark" variant="primary" size="sm" wire:click="clearFilters">Clear All
-                    Filters
-                </flux:button>
-            </div>
-        </div>
-    </flux:card>
 
     <!-- Sorting -->
-    <div class="flex items-center justify-between my-10">
+    <div class="flex items-center justify-between my-4">
         <div class="flex items-center space-x-4">
             <flux:text>Sort by:</flux:text>
 
@@ -342,12 +353,14 @@ new class extends Component {
                     @endif
                 </flux:button>
             </flux:button.group>
-            <flux:badge size="sm" icon="document-magnifying-glass" color="red" variant="solid">{{ $events->total() }} events</flux:badge>
+            <flux:badge size="sm" icon="document-magnifying-glass" color="red" variant="solid">{{ $events->total() }}
+                events
+            </flux:badge>
         </div>
     </div>
 
     <!-- Events Grid -->
-    <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-2 xl:grid-cols-3 gap-6 mb-8">
+    <div class="grid grid-cols-1 gap-4">
         @forelse($events as $event)
             <flux:card>
                 <!-- Event Image or Placeholder -->
@@ -408,7 +421,7 @@ new class extends Component {
 
                     <!-- Description -->
                     @if($event->description)
-                        <flux:text size="sm" class="mb-3 line-clamp-3">
+                        <flux:text size="md" class="mb-3 line-clamp-3">
                             {!! Str::limit(strip_tags($event->description), 150) !!}
                         </flux:text>
                     @endif
@@ -417,22 +430,22 @@ new class extends Component {
                     <!-- Event Details -->
                     <div class="space-y-2">
                         <div class="flex items-center">
-                            <flux:icon name="calendar" class="mr-2 w-4 h-4"/>
+                            <flux:icon name="calendar" class="mr-2 w-4 h-4 text-zinc-700 dark:text-zinc-400"/>
                             {{ $event->start_date->format('M d, Y g:i A') }}
                         </div>
 
                         <div class="flex items-center">
-                            <flux:icon.map-pin class="mr-2 w-4 h-4"/>
+                            <flux:icon.map-pin class="mr-2 w-4 h-4 text-zinc-700 dark:text-zinc-400"/>
                             {{ $event->venue->name }}
                         </div>
 
                         <div class="flex items-center">
-                            <flux:icon.user class="mr-2 w-4 h-4"/>
+                            <flux:icon.user class="mr-2 w-4 h-4 text-zinc-700 dark:text-zinc-400"/>
                             {{ $event->user->name }}
                         </div>
 
                         <div class="flex items-center">
-                            <flux:icon.square-3-stack-3d class="mr-2 w-4 h-4"/>
+                            <flux:icon.square-3-stack-3d class="mr-2 w-4 h-4 text-zinc-700 dark:text-zinc-400"/>
                             {{ $event->eventSessions->count() }}
                             session{{ $event->eventSessions->count() !== 1 ? 's' : '' }}
                         </div>
@@ -441,7 +454,8 @@ new class extends Component {
                     <!-- Actions -->
                     <div class="flex items-center justify-between my-3">
                         <div class="flex space-x-2">
-                            <flux:button icon="eye" variant="primary" size="sm" href="{{ route('events.show', $event) }}">Show
+                            <flux:button icon="eye" variant="primary" size="sm"
+                                         href="{{ route('events.show', $event) }}">Show
                             </flux:button>
 
                             @can('event-edit')
@@ -452,9 +466,13 @@ new class extends Component {
                         </div>
 
                         @if($event->rsvp_closes_at->isFuture())
-                            <flux:badge icon="arrow-right-end-on-rectangle" size="sm" color="blue" variant="solid">RSVP Open</flux:badge>
+                            <flux:badge icon="arrow-right-end-on-rectangle" size="sm" color="blue" variant="solid">RSVP
+                                Open
+                            </flux:badge>
                         @else
-                            <flux:badge icon="arrow-left-start-on-rectangle" size="sm" color="red" variant="solid">RSVP Closed</flux:badge>
+                            <flux:badge icon="arrow-left-start-on-rectangle" size="sm" color="red" variant="solid">RSVP
+                                Closed
+                            </flux:badge>
                         @endif
                     </div>
                 </div>
@@ -462,7 +480,7 @@ new class extends Component {
         @empty
             <div class="col-span-full">
                 <div class="text-center py-12">
-                    <flux:icon name="calendar" size="xl" class="mb-4 w-16 h-16 mx-auto text-zinc-400"/>
+                    <flux:icon color="teal" name="calendar" size="xl" class="mb-4 w-16 h-16 mx-auto"/>
                     <flux:heading size="lg">No events found</flux:heading>
                     <flux:text>
                         @if($search || !empty($selectedCategories) || $selectedVenue || $dateFilter || $myEventsOnly)

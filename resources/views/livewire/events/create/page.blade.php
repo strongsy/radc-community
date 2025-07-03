@@ -49,16 +49,6 @@ new class extends Component {
     #[Validate]
     public string $close_rsvp_at = '';
 
-    // Collections
-    #[Validate('required')]
-    public Collection $eventTypes;
-
-    #[Validate]
-    public Collection $eventLocations;
-
-    #[Validate]
-    public Collection $eventCategories;
-
     #[Validate]
     public array $files = [];
 
@@ -79,16 +69,37 @@ new class extends Component {
 
     public function mount(): void
     {
-        $this->eventTypes = Title::orderBy('name')->get() ?: collect();
-        $this->eventLocations = Venue::orderBy('name')->get() ?: collect();
-        $this->eventCategories = Category::orderBy('name')->get() ?: collect();
-
         // Initialize a session array if it's empty
         if (empty($this->sessions)) {
             $this->sessions = [];
             $this->addSession();
         }
     }
+
+    #[Computed]
+    public function eventTypes()
+    {
+        return Cache::remember('event_types', 3600, static function () {
+            return Title::orderBy('name')->get();
+        });
+    }
+
+    #[Computed]
+    public function eventLocations()
+    {
+        return Cache::remember('event_locations', 3600, static function () {
+            return Venue::orderBy('name')->get();
+        });
+    }
+
+    #[Computed]
+    public function eventCategories()
+    {
+        return Cache::remember('event_categories', 3600, static function () {
+            return Category::orderBy('name')->get();
+        });
+    }
+
 
     public function addSession(): void
     {
@@ -158,7 +169,7 @@ new class extends Component {
         if (empty($value)) {
             return null;
         }
-        return (float) $value;
+        return (float)$value;
     }
 
 
@@ -403,126 +414,120 @@ new class extends Component {
     }
 };
 ?>
+
+{{-- **********Create Event layout********** --}}
 <div>
     <div
         class="flex flex-col mx-auto max-w-7xl translate-y-0 starting:translate-y-6 object-cover starting:opacity-0 opacity-100 transition-all duration-750 space-y-6">
 
         <flux:heading size="xl" class="mb-6">Create New Community Event</flux:heading>
 
-        <!-- Display general errors -->
-        {{--@error('general')
-        <flux:card variant="danger">
-            <flux:text>{{ $message }}</flux:text>
-        </flux:card>
-        @enderror--}}
-
         <flux:card>
             <flux:heading size="xl" class="mb-6">Event Details</flux:heading>
             <form wire:submit="save">
-                <flux:fieldset>
-                    <div class="grid 2xl:grid-cols-3 gap-x-4">
-                        <div>
-                            <flux:select badge="required" required variant="listbox" searchable
-                                         placeholder="Choose type..."
-                                         label="Event type"
-                                         wire:model.lazy="type">
-                                @forelse($eventTypes as $type)
-                                    <flux:select.option value="{{ $type->id }}">{{ $type->name }}</flux:select.option>
-                                @empty
-                                    <flux:text>No types found</flux:text>
-                                @endforelse
-                            </flux:select>
+                <div class="grid grid-cols-1 gap-4">
+                    <flux:fieldset>
+                        <div class="grid 2xl:grid-cols-3 gap-4">
+                            <div>
+                                <flux:select badge="required" required variant="listbox" searchable
+                                             placeholder="Choose type..."
+                                             label="Event type"
+                                             wire:model.lazy="type">
+                                    @forelse($this->eventTypes as $type)
+                                        <flux:select.option value="{{ $type->id }}">{{ $type->name }}</flux:select.option>
+                                    @empty
+                                        <flux:text>No types found</flux:text>
+                                    @endforelse
+                                </flux:select>
+                            </div>
+
+                            <div>
+                                <flux:field>
+                                    <flux:label badge="required">Event Venue</flux:label>
+                                    <flux:input.group>
+                                        <flux:button icon="plus" wire:click="venueModal"/>
+                                        <flux:select badge="required" required variant="listbox" searchable
+                                                     placeholder="Choose venue..."
+                                                     wire:model.live="venue">
+                                            @forelse($this->eventLocations as $location)
+                                                <flux:select.option value="{{ $location->id }}">{{ $location->name }}</flux:select.option>
+                                            @empty
+                                                <flux:text>No locations found</flux:text>
+                                            @endforelse
+                                        </flux:select>
+                                    </flux:input.group>
+                                    <flux:error name="venue"/>
+                                </flux:field>
+                            </div>
+
+                            <div>
+                                <flux:select badge="required" required variant="listbox" multiple searchable
+                                             placeholder="Choose categories..."
+                                             label="Event categories"
+                                             wire:model.lazy="categories">
+                                    @forelse($this->eventCategories as $category)
+                                        <flux:select.option value="{{ $category->id }}">{{ $category->name }}</flux:select.option>
+                                    @empty
+                                        <flux:text>No categories found</flux:text>
+                                    @endforelse
+                                </flux:select>
+                            </div>
+
+                            <div>
+                                <flux:date-picker badge="required" required wire:model.lazy="event_start_date"
+                                                  label="Start date"/>
+                            </div>
+
+                            <div>
+                                <flux:date-picker badge="required" required wire:model.lazy="event_end_date"
+                                                  label="End date"/>
+                            </div>
+
+                            <div>
+                                <flux:date-picker badge="required" required wire:model.lazy="close_rsvp_at"
+                                                  label="Close RSVP at"/>
+                            </div>
+
+                            <div class="grid grid-cols-1 col-span-full">
+                                <flux:editor badge="required" required wire:model.lazy="description"
+                                toolbar="heading | bold italic underline"
+                                             label="Event description"
+                                             class="**:data-[slot=content]:min-h-[100px]!"/>
+                            </div>
+
+                            <div class="grid grid-cols-1 col-span-full">
+                                <flux:fieldset>
+                                    <flux:label badge="optional" class="mb-2!">Event Documents</flux:label>
+                                    <livewire:media-library
+                                        wire:model.lazy="files"
+                                        multiple
+                                        max-size="10240"
+                                        max-items="20"
+                                    />
+                                    <flux:description class="mt-2!">
+                                        Upload documents and images for your event.
+                                        Supported formats: JPG, PNG, DOC, DOCX, PPT, PPTX, XLS, XLSX, PDF (Max: 10MB per
+                                        file)
+                                    </flux:description>
+                                </flux:fieldset>
+                            </div>
                         </div>
+                    </flux:fieldset>
+                </div>
 
-                        <div>
-
-                            <flux:field>
-                                <flux:label badge="required">Event Venue</flux:label>
-                                <flux:input.group>
-                                    <flux:button icon="plus" wire:click="venueModal"/>
-                                    <flux:select badge="required" required variant="listbox" searchable
-                                                 placeholder="Choose venue..."
-                                                 wire:model.live="venue">
-                                        @forelse($eventLocations as $location)
-                                            <flux:select.option
-                                                value="{{ $location->id }}">{{ $location->name }}</flux:select.option>
-                                        @empty
-                                            <flux:text>No locations found</flux:text>
-                                        @endforelse
-                                    </flux:select>
-                                </flux:input.group>
-                                <flux:error name="venue"/>
-
-                            </flux:field>
-
-
-                        </div>
-
-                        <div>
-                            <flux:select badge="required" required variant="listbox" multiple searchable
-                                         placeholder="Choose categories..."
-                                         label="Event categories"
-                                         wire:model.lazy="categories">
-                                @forelse($eventCategories as $category)
-                                    <flux:select.option
-                                        value="{{ $category->id }}">{{ $category->name }}</flux:select.option>
-                                @empty
-                                    <flux:text>No categories found</flux:text>
-                                @endforelse
-                            </flux:select>
-                        </div>
-                    </div>
-
-                    <div class="grid grid-cols-1 mt-6">
-                        <flux:editor badge="required" required wire:model.lazy="description" label="Event description"
-                                     class="**:data-[slot=content]:min-h-[100px]!"/>
-                    </div>
-
-                    <div class="grid 2xl:grid-cols-3 gap-4 space-y-6 mt-6">
-                        <div>
-                            <flux:date-picker badge="required" required wire:model.lazy="event_start_date"
-                                              label="Start date"/>
-                        </div>
-
-                        <div>
-                            <flux:date-picker badge="required" required wire:model.lazy="event_end_date"
-                                              label="End date"/>
-                        </div>
-
-                        <div>
-                            <flux:date-picker badge="required" required wire:model.lazy="close_rsvp_at"
-                                              label="Close RSVP at"/>
-                        </div>
-                    </div>
-
-                    <div class="grid grid-cols-1 col-span-full">
-                        <flux:fieldset>
-                            <flux:label badge="optional" class="mb-2!">Event Documents</flux:label>
-                            <livewire:media-library
-                                wire:model="files"
-                                multiple
-                                max-size="10240"
-                                max-items="20"
-                            />
-                            <flux:description class="mt-2!">
-                                Upload documents and images for your event.
-                                Supported formats: JPG, PNG, DOC, DOCX, PPT, PPTX, XLS, XLSX, PDF (Max: 10MB per file)
-                            </flux:description>
-                        </flux:fieldset>
-                    </div>
-                </flux:fieldset>
-
+                <div class="grid grid-cols-1 col-span-full my-6">
+                    <flux:separator class="h-2"/>
+                </div>
                 {{-- Event Sessions --}}
-                <div class="mb-6">
-                    <div class="flex flex-col max-h-screen overflow-hidden mt-6">
+                <div>
+                    <div class="grid grid-cols-1">
                         <flux:heading size="xl">Event Sessions</flux:heading>
                         <flux:text variant="subtle" class="text-xs md:text-md">
                             Add your sessions (sub events) to this event. You must have at least one and a
                             maximum of 40 sessions.
                         </flux:text>
-                        <flux:separator variant="subtle" class="my-6"/>
 
-                        <div class="flex justify-between items-center">
+                        <div class="flex justify-between items-center space-y-2 my-4">
                             <flux:text size="sm">Sessions ({{ is_array($sessions) ? count($sessions) : 0 }}/40)
                             </flux:text>
                             <flux:button icon="calendar-days" wire:click="addSession" variant="primary"
@@ -534,97 +539,97 @@ new class extends Component {
                     </div>
                 </div>
 
-                <main>
-                    <div class="grid grid-cols-1  gap-4">
-                        @if(is_array($sessions))
-                            @forelse ($sessions as $index => $session)
-                                <flux:card class="gap-4 p-4!">
-                                    <div class="flex justify-between items-center my-6">
-                                        <flux:badge size="sm" color="amber" variant="solid">
-                                            Session {{ $index + 1 }}
-                                        </flux:badge>
-                                        @if(count($sessions) > 1)
-                                            <flux:button icon="trash" wire:click="removeSession({{ $index }})"
-                                                         variant="danger" size="xs">
-                                                Remove Session
-                                            </flux:button>
-                                        @endif
+
+                <div class="grid grid-cols-1 gap-4">
+                    @if(is_array($sessions))
+                        @forelse ($sessions as $index => $session)
+                            <flux:card>
+                                <div class="flex justify-between items-center mb-4">
+                                    <flux:badge size="sm" color="amber" variant="solid">
+                                        Session {{ $index + 1 }}
+                                    </flux:badge>
+                                    @if(count($sessions) > 1)
+                                        <flux:button icon="trash" wire:click="removeSession({{ $index }})"
+                                                     variant="danger" size="xs">
+                                            Remove Session
+                                        </flux:button>
+                                    @endif
+                                </div>
+
+                                <div class="grid grid-cols-1 md:grid-cols-3 gap-x-4 space-y-4">
+                                    <div>
+                                        <flux:input badge="required" required label="Title"
+                                                    wire:model.lazy="sessions.{{ $index }}.name"/>
                                     </div>
 
-                                    <div class="grid grid-cols-1 md:grid-cols-3 gap-x-4 space-y-6">
-                                        <div>
-                                            <flux:input badge="required" required label="Title"
-                                                        wire:model.lazy="sessions.{{ $index }}.name"/>
-                                        </div>
+                                    <div>
+                                        <flux:input badge="required" required label="Location"
+                                                    wire:model.lazy="sessions.{{ $index }}.location"/>
+                                    </div>
 
-                                        <div>
-                                            <flux:input badge="required" required label="Location"
-                                                        wire:model.lazy="sessions.{{ $index }}.location"/>
-                                        </div>
+                                    <div>
+                                        <flux:input badge="optional" label="Capacity"
+                                                    wire:model.lazy="sessions.{{ $index }}.capacity"/>
+                                    </div>
 
-                                        <div>
-                                            <flux:input badge="optional" label="Capacity"
-                                                        wire:model.lazy="sessions.{{ $index }}.capacity"/>
-                                        </div>
+                                    <div class="grid col-span-full">
+                                        <flux:textarea badge="required" rows="3" required label="Description"
+                                                       wire:model.lazy="sessions.{{ $index }}.description"/>
+                                    </div>
 
-                                        <div class="grid col-span-full">
-                                            <flux:textarea badge="required" rows="3" required label="Description"
-                                                           wire:model.lazy="sessions.{{ $index }}.description"/>
-                                        </div>
+                                    <div>
+                                        <flux:date-picker badge="required" required label="Start date"
+                                                          wire:model.lazy="sessions.{{ $index }}.start_date"/>
+                                    </div>
 
-                                        <div>
-                                            <flux:date-picker badge="required" required label="Start date"
-                                                              wire:model.lazy="sessions.{{ $index }}.start_date"/>
-                                        </div>
+                                    <div>
+                                        <flux:input badge="required" required type="time" label="Start time"
+                                                    wire:model.lazy="sessions.{{ $index }}.start_time"/>
+                                    </div>
 
-                                        <div>
-                                            <flux:input badge="required" required type="time" label="Start time"
-                                                        wire:model.lazy="sessions.{{ $index }}.start_time"/>
-                                        </div>
+                                    <div>
+                                        <flux:input badge="required" required type="time" label="End time"
+                                                    wire:model.lazy="sessions.{{ $index }}.end_time"/>
+                                    </div>
 
-                                        <div>
-                                            <flux:input badge="required" required type="time" label="End time"
-                                                        wire:model.lazy="sessions.{{ $index }}.end_time"/>
-                                        </div>
+                                    <div>
+                                        <flux:field>
+                                            <flux:label badge="optional">Grant</flux:label>
+                                            <flux:input.group>
+                                                <flux:input.group.prefix>£</flux:input.group.prefix>
+                                                <flux:input badge="optional" placeholder="e.g. £10.00"
+                                                            wire:model.lazy="sessions.{{ $index }}.grant"/>
+                                            </flux:input.group>
+                                            <flux:error name="grant"/>
+                                        </flux:field>
+                                    </div>
 
-                                        <div>
-                                            <flux:field>
-                                                <flux:label badge="optional">Grant</flux:label>
-                                                <flux:input.group>
-                                                    <flux:input.group.prefix>£</flux:input.group.prefix>
-                                                    <flux:input badge="optional" placeholder="e.g. £10.00"
-                                                                wire:model.lazy="sessions.{{ $index }}.grant"/>
-                                                </flux:input.group>
-                                                <flux:error name="grant"/>
-                                            </flux:field>
-                                        </div>
+                                    <div>
+                                        <flux:field>
+                                            <flux:label badge="optional">Cost</flux:label>
+                                            <flux:input.group>
+                                                <flux:input.group.prefix>£</flux:input.group.prefix>
+                                                <flux:input badge="optional" placeholder="e.g. £10.00"
+                                                            wire:model.lazy="sessions.{{ $index }}.cost"/>
+                                            </flux:input.group>
+                                            <flux:error name="cost"/>
+                                        </flux:field>
+                                    </div>
 
-                                        <div>
-                                            <flux:field>
-                                                <flux:label badge="optional">Cost</flux:label>
-                                                <flux:input.group>
-                                                    <flux:input.group.prefix>£</flux:input.group.prefix>
-                                                    <flux:input badge="optional" placeholder="e.g. £10.00"
-                                                                wire:model.lazy="sessions.{{ $index }}.cost"/>
-                                                </flux:input.group>
-                                                <flux:error name="cost"/>
-                                            </flux:field>
-                                        </div>
-
-                                        <div class="md:mt-10">
-                                            <flux:checkbox label="Allow guests"
-                                                           wire:model.lazy="sessions.{{ $index }}.allow_guests"/>
-
-                                        </div>
+                                    <div class="md:mt-10">
+                                        <flux:checkbox label="Allow guests"
+                                                       wire:model.lazy="sessions.{{ $index }}.allow_guests"/>
 
                                     </div>
-                                </flux:card>
-                            @empty
-                                <flux:text>No sessions found</flux:text>
-                            @endforelse
-                        @endif
-                    </div>
-                </main>
+
+                                </div>
+                            </flux:card>
+                        @empty
+                            <flux:text>No sessions found</flux:text>
+                        @endforelse
+                    @endif
+                </div>
+
 
                 <div class="flex justify-end mt-6 gap-4">
                     <flux:button type="button" variant="filled" href="{{ route('events.index') }}">Back</flux:button>

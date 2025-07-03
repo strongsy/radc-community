@@ -74,8 +74,8 @@ Route::middleware(['auth'])->group(function () {
     // Event routes
     Volt::route('events/index', 'events.index.page')->name('events.index')->middleware('can:event-read');
     Volt::route('events/create', 'events.create.page')->name('events.create')->middleware('can:event-create');
-    Volt::route('events/edit/{id}', 'events.edit.page')->name('events.edit')->middleware('can:event-update');
-    Volt::route('events/show/{id}', 'events.show.page')->name('events.show')->middleware('can:event-read');
+    Volt::route('events/{event}/edit/', 'events.edit.page')->name('events.edit')->middleware('can:event-update');
+    Volt::route('events/{id}/show/', 'events.show.page')->name('events.show')->middleware('can:event-read');
 
     // Gallery routes
     Volt::route('gallery/index', 'gallery.index.page')->name('gallery.index')->middleware('can:gallery-read');
