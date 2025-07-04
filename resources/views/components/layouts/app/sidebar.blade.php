@@ -3,7 +3,6 @@
 <head>
     <title>{{ config('app.name') }}</title>
     @fluxAppearance
-    @fluxStyles
     @mediaLibraryStyles
     @include('partials.head')
 </head>

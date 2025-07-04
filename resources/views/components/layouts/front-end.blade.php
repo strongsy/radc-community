@@ -2,6 +2,8 @@
 <html lang="{{ str_replace('_', '-', app()->getLocale()) }}" class="dark">
 <head>
     <title>{{ $title ?? 'Default Title' }}</title>
+    @fluxAppearance
+    @fluxStyles
     @include('partials.head')
 </head>
 <body class="min-h-screen bg-white dark:bg-zinc-800">

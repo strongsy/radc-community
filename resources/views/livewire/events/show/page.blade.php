@@ -794,7 +794,7 @@ new class extends Component {
                 $sheet->setCellValue('A' . $row, $user->name);
                 $sheet->setCellValue('B' . $row, $user->email);
                 $sheet->setCellValue('C' . $row, 'Registered User');
-                $sheet->setCellValue('D' . $row, $event->title->name);
+                $sheet->setCellValue('D' . $row, $session->name);
                 $sheet->setCellValue('E' . $row, $session->start_date->format('M d, Y'));
                 $sheet->setCellValue('F' . $row, $grantAmount > 0 ? 'Yes' : 'No');
                 $sheet->setCellValue('G' . $row, '£' . number_format($baseCost, 2));
@@ -813,7 +813,7 @@ new class extends Component {
                 $sheet->setCellValue('A' . $row, $guest->name);
                 $sheet->setCellValue('B' . $row, $guest->email);
                 $sheet->setCellValue('C' . $row, 'Guest');
-                $sheet->setCellValue('D' . $row, $event->title->name);
+                $sheet->setCellValue('D' . $row, $session->name);
                 $sheet->setCellValue('E' . $row, $session->start_date->format('M d, Y'));
                 $sheet->setCellValue('F' . $row, 'No');
                 $sheet->setCellValue('G' . $row, '£' . number_format($baseCost, 2));
@@ -881,7 +881,7 @@ new class extends Component {
             $userCount = $session->eventSessionUsers->count();
             $guestCount = $session->eventSessionGuests->count();
 
-            $sheet->setCellValue('A' . $row, $event->title->name);
+            $sheet->setCellValue('A' . $row, $session->name);
             $sheet->setCellValue('B' . $row, $session->start_date->format('M d, Y'));
             $sheet->setCellValue('C' . $row, Carbon::parse($session->start_time)->format('g:i A') . ' - ' . Carbon::parse($session->end_time)->format('g:i A'));
             $sheet->setCellValue('D' . $row, $session->location);
@@ -906,11 +906,11 @@ new class extends Component {
     private function createSessionSheet(Spreadsheet $spreadsheet, $session, $event): void
     {
         $sheet = $spreadsheet->createSheet();
-        $sheetTitle = substr($event->title->name . ' - ' . $session->start_date->format('M d'), 0, 31);
+        $sheetTitle = substr($session->name . ' - ' . $session->start_date->format('M d'), 0, 31);
         $sheet->setTitle($sheetTitle);
 
         // Session info
-        $sheet->setCellValue('A1', 'Session: ' . $event->title->name);
+        $sheet->setCellValue('A1', 'Session: ' . $session->name);
         $sheet->setCellValue('A2', 'Date: ' . $session->start_date->format('M d, Y'));
         $sheet->setCellValue('A3', 'Time: ' . Carbon::parse($session->start_time)->format('g:i A') . ' - ' . Carbon::parse($session->end_time)->format('g:i A'));
         $sheet->setCellValue('A4', 'Location: ' . $session->location);
@@ -1461,7 +1461,7 @@ new class extends Component {
 
     </flux:card>
 
-    <!-- Guest Modal -->
+    <!-- **********Guest Modal********** -->
     @if($showGuestModal)
         <flux:modal name="guest-modal" wire:model="showGuestModal">
             <form wire:submit="addGuest">
@@ -1488,7 +1488,7 @@ new class extends Component {
                     <div class="grid grid-cols-1 lg:grid-cols-3 gap-4">
                         <!-- Food Preferences -->
                         <div>
-                            <flux:text size="sm" class="font-medium mb-2">Food Preferences</flux:text>
+                            <flux:text>Food Preferences</flux:text>
                             <div class="space-y-1 max-h-32 overflow-y-auto">
                                 @foreach($foodPreferences as $preference)
                                     <flux:checkbox
@@ -1502,7 +1502,7 @@ new class extends Component {
 
                         <!-- Drink Preferences -->
                         <div>
-                            <flux:text size="sm" class="font-medium mb-2">Drink Preferences</flux:text>
+                            <flux:text>Drink Preferences</flux:text>
                             <div class="space-y-1 max-h-32 overflow-y-auto">
                                 @foreach($drinkPreferences as $drink)
                                     <flux:checkbox
@@ -1516,7 +1516,7 @@ new class extends Component {
 
                         <!-- Allergies -->
                         <div>
-                            <flux:text size="sm" class="font-medium mb-2">Allergies</flux:text>
+                            <flux:text>Allergies</flux:text>
                             <div class="space-y-1 max-h-32 overflow-y-auto">
                                 @foreach($foodAllergies as $allergy)
                                     <flux:checkbox
@@ -1538,79 +1538,75 @@ new class extends Component {
         </flux:modal>
     @endif
 
-    <!-- Edit Guest Modal -->
-    <form wire:click="updateGuest">
-        <flux:modal name="edit-guest-modal" wire:model="showEditGuestModal">
-            <div class="p-6">
-                <h2 class="text-lg font-medium mb-4">Edit Guest</h2>
+    <!-- **********Edit Guest Modal********** -->
+    <flux:modal name="edit-guest-modal" wire:model="showEditGuestModal">
+        <form wire:click="updateGuest">
+            <div class="space-y-6">
+                <div>
+                    <flux:heading size="lg">Edit Guest</flux:heading>
+                    <flux:text>Edit guest requirements</flux:text>
+                </div>
 
-                <div class="space-y-4">
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <div>
-                        <flux:field>
-                            <flux:label>Guest Name</flux:label>
-                            <flux:input wire:model="guestName" placeholder="Enter guest name"/>
-                            <flux:error name="guestName"/>
-                        </flux:field>
+                        <flux:label>Guest Name</flux:label>
+                        <flux:input wire:model="guestName" placeholder="Enter guest name"/>
+                        <flux:error name="guestName"/>
                     </div>
 
                     <div>
-                        <flux:field>
-                            <flux:label>Guest Email</flux:label>
-                            <flux:input wire:model="guestEmail" type="email" placeholder="Enter guest email"/>
-                            <flux:error name="guestEmail"/>
-                        </flux:field>
+                        <flux:label>Guest Email</flux:label>
+                        <flux:input wire:model="guestEmail" type="email" placeholder="Enter guest email"/>
+                        <flux:error name="guestEmail"/>
+                    </div>
+
+                </div>
+
+                <div class="grid grid-cols-1 lg:grid-cols-3 gap-4">
+                    <div>
+                        <flux:label>Food Preferences</flux:label>
+                        <div class="space-y-1 max-h-32 overflow-y-auto">
+                            @foreach($foodPreferences as $preference)
+                                <flux:checkbox
+                                    wire:model="guestFoodPreferences"
+                                    value="{{ $preference->id }}"
+                                >
+                                    {{ $preference->name }}
+                                </flux:checkbox>
+                            @endforeach
+                        </div>
                     </div>
 
                     <div>
-                        <flux:field>
-                            <flux:label>Food Preferences</flux:label>
-                            <div class="grid grid-cols-2 gap-2">
-                                @foreach($foodPreferences as $preference)
-                                    <flux:checkbox
-                                        wire:model="guestFoodPreferences"
-                                        value="{{ $preference->id }}"
-                                    >
-                                        {{ $preference->name }}
-                                    </flux:checkbox>
-                                @endforeach
-                            </div>
-                        </flux:field>
+                        <flux:label>Drink Preferences</flux:label>
+                        <div class="space-y-1 max-h-32 overflow-y-auto">
+                            @foreach($drinkPreferences as $preference)
+                                <flux:checkbox
+                                    wire:model="guestDrinkPreferences"
+                                    value="{{ $preference->id }}"
+                                >
+                                    {{ $preference->name }}
+                                </flux:checkbox>
+                            @endforeach
+                        </div>
                     </div>
 
                     <div>
-                        <flux:field>
-                            <flux:label>Drink Preferences</flux:label>
-                            <div class="grid grid-cols-2 gap-2">
-                                @foreach($drinkPreferences as $preference)
-                                    <flux:checkbox
-                                        wire:model="guestDrinkPreferences"
-                                        value="{{ $preference->id }}"
-                                    >
-                                        {{ $preference->name }}
-                                    </flux:checkbox>
-                                @endforeach
-                            </div>
-                        </flux:field>
-                    </div>
-
-                    <div>
-                        <flux:field>
-                            <flux:label>Food Allergies</flux:label>
-                            <div class="grid grid-cols-2 gap-2">
-                                @foreach($foodAllergies as $allergy)
-                                    <flux:checkbox
-                                        wire:model="guestAllergies"
-                                        value="{{ $allergy->id }}"
-                                    >
-                                        {{ $allergy->name }}
-                                    </flux:checkbox>
-                                @endforeach
-                            </div>
-                        </flux:field>
+                        <flux:label>Food Allergies</flux:label>
+                        <div class="space-y-1 max-h-32 overflow-y-auto">
+                            @foreach($foodAllergies as $allergy)
+                                <flux:checkbox
+                                    wire:model="guestAllergies"
+                                    value="{{ $allergy->id }}"
+                                >
+                                    {{ $allergy->name }}
+                                </flux:checkbox>
+                            @endforeach
+                        </div>
                     </div>
                 </div>
 
-                <div class="flex justify-end space-x-3 mt-6">
+                <div class="flex justify-end gap-3">
                     <flux:button variant="ghost" wire:click="closeEditGuestModal">
                         Cancel
                     </flux:button>
@@ -1619,11 +1615,11 @@ new class extends Component {
                     </flux:button>
                 </div>
             </div>
-        </flux:modal>
-    </form>
+        </form>
+    </flux:modal>
 
 
-    <!-- Back Button -->
+    <!-- **********Back Button********** -->
     <div class="flex justify-start">
         <flux:button href="{{ route('events.index') }}" variant="filled" icon="arrow-left">
             Back to Events
