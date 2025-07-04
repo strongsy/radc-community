@@ -38,9 +38,9 @@ new class extends Component {
     public array $guests = [];
     public bool $showGuestModal = false;
     public bool $showEditGuestModal = false;
-    public int $editingGuestId = 0;
+    public ?int $editingGuestId = null;
 
-    public int $currentSessionId = 0;
+    public ?int $currentSessionId = null;
 
     // Guest form data
     public string $guestName = '';
@@ -202,10 +202,17 @@ new class extends Component {
             }
 
             DB::transaction(function () use ($sessionId) {
+                $session = EventSession::lockForUpdate()->find($sessionId);
+
+                if ($session->capacity && $this->getSessionRegistrationCount($sessionId) >= $session->capacity) {
+                    throw new \RuntimeException('Session is at full capacity');
+                }
+
                 $eventSessionUser = EventSessionUser::create([
                     'user_id' => auth()->id(),
                     'event_session_id' => $sessionId,
                 ]);
+
 
                 // Attach preferences if selected
                 if (!empty($this->userPreferences[$sessionId])) {
@@ -355,10 +362,10 @@ new class extends Component {
     {
         /** @var EventSession|null $session */
         $session = $this->eventSessions->firstWhere('id', $sessionId);
-
-        if (!$session->allow_guests) {
+        if (!$session || !$session->allow_guests) {
             return;
         }
+
 
         if (!in_array($sessionId, $this->selectedSessions, true)) {
             Flux::toast(
@@ -494,9 +501,9 @@ new class extends Component {
                 ]);
 
                 // Sync preferences
-                $guest->foodPreferences()->sync($this->guestFoodPreferences ?? []);
-                $guest->drinkPreferences()->sync($this->guestDrinkPreferences ?? []);
-                $guest->foodAllergies()->sync($this->guestAllergies ?? []);
+                $guest->foodPreferences()->sync($this->guestFoodPreferences);
+                $guest->drinkPreferences()->sync($this->guestDrinkPreferences);
+                $guest->foodAllergies()->sync($this->guestAllergies);
             });
 
             $this->refreshEventData();
@@ -527,8 +534,8 @@ new class extends Component {
     public function closeEditGuestModal(): void
     {
         $this->showEditGuestModal = false;
-        $this->editingGuestId = 0;
-        $this->currentSessionId = 0;
+        $this->editingGuestId = null;
+        $this->currentSessionId = null;
         $this->resetGuestForm();
     }
 
@@ -977,11 +984,17 @@ new class extends Component {
         // Style the headers
         $sheet->getStyle('A1')->getFont()->setBold(true)->setSize(14);
         $sheet->getStyle('A6')->getFont()->setBold(true)->setSize(12);
+        $sheet->getStyle('A11')->getFont()->setBold(true)->setSize(12);
 
         // Find and style the user headers
         $userHeaderRow = 7;
         if ($session->eventSessionUsers->count() > 0) {
             $sheet->getStyle('A' . $userHeaderRow . ':E' . $userHeaderRow)->getFont()->setBold(true);
+        }
+
+        $guestHeaderRow = 12;
+        if($session->allow_guests) {
+            $sheet->getStyle('A' . $guestHeaderRow . ':E' . $guestHeaderRow)->getFont()->setBold(true);
         }
 
         // Find and style the guest headers
@@ -1064,16 +1077,16 @@ new class extends Component {
                     </flux:badge>
                 @endif
                 <div class="space-y-4 mt-6">
-                    <div class="flex items-center">
-                        <flux:icon.user class="mr-3 w-5 h-5"/>
+                    <div class="flex items-center gap-2">
+                        <flux:icon.user size="lg" class="text-zinc-700 dark:text-zinc-400"/>
                         <div>
                             <flux:heading size="sm" class="font-medium">Organizer</flux:heading>
                             <flux:text size="sm">{{ $event->user->name }}</flux:text>
                         </div>
                     </div>
 
-                    <div class="flex items-center">
-                        <flux:icon.clock class="mr-3 w-5 h-5"/>
+                    <div class="flex items-center gap-2">
+                        <flux:icon.clock size="lg" class="text-zinc-700 dark:text-zinc-400"/>
                         <div>
                             <flux:heading size="sm" class="font-medium">RSVP Closes</flux:heading>
                             <flux:text size="sm">{{ $event->rsvp_closes_at->format('D d M Y g:i A') }}</flux:text>
@@ -1094,8 +1107,8 @@ new class extends Component {
             </div>
             <div class="flex flex-col justify-center">
                 <div class="justify-self-center items-center space-y-4">
-                    <div class="flex">
-                        <flux:icon.calendar class="mr-3 w-5 h-5"/>
+                    <div class="flex gap-2">
+                        <flux:icon.calendar size="lg" class="text-zinc-700 dark:text-zinc-400"/>
                         <div>
                             <flux:heading size="sm">Event Dates</flux:heading>
                             <flux:text size="sm">
@@ -1104,8 +1117,8 @@ new class extends Component {
                         </div>
                     </div>
 
-                    <div class="flex items-center">
-                        <flux:icon.map-pin class="mr-3 w-5 h-5"/>
+                    <div class="flex items-center gap-2">
+                        <flux:icon.map-pin size="lg" class="text-zinc-700 dark:text-zinc-400"/>
                         <div>
                             <flux:heading size="sm" class="font-medium">Venue</flux:heading>
                             <div>
@@ -1122,24 +1135,17 @@ new class extends Component {
                         </div>
                     </div>
 
-                    <div class="flex items-center">
-                        <flux:icon.clock class="mr-3 w-5 h-5"/>
-                        <div>
-                            <flux:heading size="sm" class="font-medium">RSVP Closes</flux:heading>
-                            <flux:text size="sm">{{ $event->rsvp_closes_at->format('M d, Y g:i A') }}</flux:text>
-                        </div>
-                    </div>
                 </div>
             </div>
 
-            <div class="flex justify-end">
+            <div class="flex justify-center md:justify-end">
                 @php
                     $media = $event->getFirstMedia('event');
                 @endphp
                 @if($media)
                     <div class="lg:ml-8 mt-6 lg:mt-0">
                         <img src="{{ $media->getUrl('event') }}" alt="{{ $event->title->name }}"
-                             class="w-full lg:w-80 h-60 object-cover rounded-lg">
+                             class="w-full lg:w-80 h-60 object-fill md:object-cover rounded-lg">
                     </div>
                 @endif
             </div>
@@ -1229,7 +1235,7 @@ new class extends Component {
 
                     {{-- **********Member register area********** --}}
                     @auth
-                        <div class="grid grid-cols-1 justify-end gap-4">
+                        <div class="grid grid-cols-1 justify-end">
                             @if($event->rsvp_closes_at->isFuture())
                                 <div class="flex flex-row items-center justify-end gap-4">
                                     <div>
@@ -1245,7 +1251,7 @@ new class extends Component {
                                                 :disabled="!$this->canAddGuests($session->id) || $currentGuestCount >= 2"
                                             >
                                                 Add
-                                                Guest {{ $currentGuestCount >= 2 ? '(Limit: 2)' : "($currentGuestCount/2)" }}
+                                                Guest {{ $currentGuestCount >= 2 ? '' : "($currentGuestCount/2)" }}
                                             </flux:button>
                                         @endif
                                     </div>
@@ -1415,27 +1421,32 @@ new class extends Component {
                                                         <div class="space-y-4">
                                                             @if(isset($guests[$session->id]))
                                                                 @foreach($guests[$session->id] as $guest)
-                                                                    <flux:card
-                                                                        class="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
-                                                                        <div>
-                                                                            <flux:text
-                                                                                size="md">{{ $guest['name'] }}</flux:text>
-                                                                            <flux:link
-                                                                                href="mailto:{{ $guest['email'] }}">{{ $guest['email'] }}</flux:link>
+                                                                    <flux:card>
+                                                                        <div class="flex flex-wrap gap-2">
+                                                                            <div>
+                                                                                <flux:text
+                                                                                    size="sm">{{ $guest['name'] }}</flux:text>
+                                                                                <flux:text size="sm">
+                                                                                    <flux:link
+                                                                                        href="mailto:{{ $guest['email'] }}">{{ $guest['email'] }}</flux:link>
+                                                                                </flux:text>
+
+                                                                            </div>
+                                                                            <div class="flex space-x-2">
+                                                                                <flux:button variant="filled" size="sm"
+                                                                                             color="teal"
+                                                                                             wire:click="openEditGuestModal({{ $session->id }}, {{ $guest['id'] }})"
+                                                                                >
+                                                                                    Edit
+                                                                                </flux:button>
+                                                                                <flux:button variant="danger" size="sm"
+                                                                                             wire:click="removeGuest({{ $session->id }}, {{ $guest['id'] }})"
+                                                                                >
+                                                                                    Remove
+                                                                                </flux:button>
+                                                                            </div>
                                                                         </div>
-                                                                        <div class="flex space-x-2">
-                                                                            <flux:button variant="filled" size="sm"
-                                                                                         color="teal"
-                                                                                         wire:click="openEditGuestModal({{ $session->id }}, {{ $guest['id'] }})"
-                                                                            >
-                                                                                Edit
-                                                                            </flux:button>
-                                                                            <flux:button variant="danger" size="sm"
-                                                                                         wire:click="removeGuest({{ $session->id }}, {{ $guest['id'] }})"
-                                                                            >
-                                                                                Remove
-                                                                            </flux:button>
-                                                                        </div>
+
                                                                     </flux:card>
                                                                 @endforeach
                                                             @endif
