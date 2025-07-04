@@ -1422,7 +1422,7 @@ new class extends Component {
                                                             @if(isset($guests[$session->id]))
                                                                 @foreach($guests[$session->id] as $guest)
                                                                     <flux:card>
-                                                                        <div class="flex flex-wrap gap-2">
+                                                                        <div class="flex flex-wrap gap-2 justify-between">
                                                                             <div>
                                                                                 <flux:text
                                                                                     size="sm">{{ $guest['name'] }}</flux:text>

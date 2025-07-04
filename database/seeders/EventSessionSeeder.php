@@ -13,9 +13,7 @@ class EventSessionSeeder extends Seeder
 {
     public function run(): void
     {
-        Event::all()->each(/**
-         * @throws RandomException
-         */ function ($event) {
+        Event::all()->each( function ($event) {
             EventSession::factory(random_int(2, 5))->create([
                 'event_id' => $event->id,
                 'start_date' => $event->start_date,

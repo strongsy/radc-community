@@ -1,5 +1,6 @@
 <?php
 
+use App\Models\User;
 use Illuminate\Database\Migrations\Migration;
 use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Support\Facades\Schema;
@@ -15,12 +16,16 @@ return new class extends Migration
 
         Schema::create('comments', static function (Blueprint $table) {
             $table->id();
-            $table->foreignIdFor(\App\Models\User::class, 'user_id')->constrained();
-            $table->bigInteger('commentable_id');
-            $table->morphs('commentable_type');
+            $table->foreignIdFor(User::class, 'user_id')->constrained();
+            $table->morphs('commentable'); // Changed from 'commentable_type' to 'commentable'
+            $table->text('content');
+            $table->unsignedBigInteger('parent_id')->nullable()->after('commentable_type');
+            $table->foreign('parent_id')->references('id')->on('comments')->onDelete('cascade');
+
             $table->timestamps();
             $table->index(['user_id', 'commentable_id']);
         });
+
 
         Schema::enableForeignKeyConstraints();
     }

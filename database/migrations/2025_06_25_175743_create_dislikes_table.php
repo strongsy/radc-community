@@ -17,8 +17,7 @@ return new class extends Migration
         Schema::create('dislikes', static function (Blueprint $table) {
             $table->id();
             $table->ForeignIdFor(User::class, 'user_id')->constrained();
-            $table->bigInteger('dislikeable_id');
-            $table->morphs('dislikeable_type');
+            $table->morphs('dislikeable');
             $table->timestamps();
             $table->index(['user_id', 'dislikeable_id']);
         });

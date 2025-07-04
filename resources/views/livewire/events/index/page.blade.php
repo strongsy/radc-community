@@ -280,7 +280,8 @@ new class extends Component {
 
                     <!-- Venue -->
                     <div>
-                        <flux:select searchable label="Venue" placeholder="Select venue..." wire:model.lazy="selectedVenue">
+                        <flux:select searchable label="Venue" placeholder="Select venue..."
+                                     wire:model.lazy="selectedVenue">
                             <option value="">All Venues</option>
                             @foreach($venues as $venue)
                                 <option value="{{ $venue->id }}">{{ $venue->name }}</option>
@@ -454,13 +455,22 @@ new class extends Component {
                     <!-- Actions -->
                     <div class="flex items-center justify-between my-3">
                         <div class="flex space-x-2">
-                            <flux:button icon="eye" variant="primary" size="sm"
-                                         href="{{ route('events.show', $event) }}">Show
-                            </flux:button>
+                            @can('event-read')
+                                <flux:button icon="eye" variant="primary" size="sm"
+                                             href="{{ route('events.show', $event) }}">Show
+                                </flux:button>
+                            @endcan
 
                             @can('event-edit')
                                 <flux:button icon="pencil-square" variant="danger" size="sm"
                                              href="{{ route('events.edit', $event) }}">Edit
+                                </flux:button>
+                            @endcan
+
+                            @can('event-read')
+                                <flux:button icon="plus" variant="primary" size="sm"
+                                             href="{{ route('events.interaction', $event) }}">
+                                    Gallery
                                 </flux:button>
                             @endcan
                         </div>
@@ -490,13 +500,9 @@ new class extends Component {
                         @endif
                     </flux:text>
                     <div class="mt-6">
-                        @if($search || !empty($selectedCategories) || $selectedVenue || $dateFilter || $myEventsOnly)
-                            <flux:button variant="primary" wire:click="clearFilters">Clear Filters</flux:button>
-                        @else
-                            <flux:button href="{{ route('events.create') }}" variant="primary" wire:click="createEvent">
-                                Create Event
-                            </flux:button>
-                        @endif
+                        <flux:button href="{{ route('events.create') }}" variant="primary">
+                            Create Event
+                        </flux:button>
                     </div>
                 </div>
             </div>

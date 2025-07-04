@@ -84,7 +84,7 @@ class Event extends Model implements HasMedia
     /**
      * Defines a polymorphic one-to-many relationship with the Gallery model.
      */
-    public function gallery(): MorphMany
+    public function galleries(): MorphMany
     {
         return $this->morphMany(Gallery::class, 'galleryable');
     }

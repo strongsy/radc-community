@@ -14,11 +14,10 @@ return new class extends Migration
     {
         Schema::disableForeignKeyConstraints();
 
-        Schema::create('gallery', static function (Blueprint $table) {
+        Schema::create('galleries', static function (Blueprint $table) {
             $table->id();
             $table->foreignIdFor(User::class, 'user_id')->constrained();
-            $table->bigInteger('galleryable_id');
-            $table->string('galleryable_type');
+            $table->morphs('galleryable');
             $table->timestamps();
             $table->index(['user_id', 'galleryable_id']);
         });
